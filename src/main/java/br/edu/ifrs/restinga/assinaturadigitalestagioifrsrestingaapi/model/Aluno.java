@@ -1,6 +1,7 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model;
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoAluno;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAutenticacaoGoogle;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroAluno;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
@@ -48,14 +49,20 @@ public class Aluno {
         this.role = role;
     }
 
-    public void atualizarInformacoes(@Valid DadosAtualizacaoAluno dados) {
+    public Aluno(DadosAutenticacaoGoogle data, Role role){
+        this.ativo = true;
+        this.nomeCompleto = data.name();
+        this.role = role;
+
+    }
+
+
+
+    public void atualizarInformacoes(@Valid DadosAtualizacaoAluno dados, Curso curso) {
         if(dados.nomeCompleto() != null){
             this.nomeCompleto = dados.nomeCompleto();
         }
 
-        if(dados.usuarioSistema() != null){
-            this.usuarioSistema.atualizarInformacoes(dados.usuarioSistema());
-        }
 
         if(dados.turno() != null){
             this.turno = dados.turno();
@@ -70,7 +77,7 @@ public class Aluno {
         }
 
         if(dados.curso() != null){
-            this.curso = dados.curso();
+            this.curso = curso;
         }
 
     }

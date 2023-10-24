@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.util.*;
 
@@ -36,6 +37,12 @@ public class Usuario implements UserDetails {
         this.email = email;
         this.senha = senha;
         this.roles = role;
+    }
+
+    public Usuario(String email,Role role, String sub) {
+        this.email = email;
+        this.roles = role;
+        this.senha = sub;
     }
 
     public Role getRoles() {
@@ -93,5 +100,6 @@ public class Usuario implements UserDetails {
         if(usuarioSistema.senha != null){
             this.senha = usuarioSistema.senha;
         }
+
     }
 }

@@ -5,6 +5,7 @@ import java.util.Optional;
 
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.CursoRepository;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.*;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.TratadorDeErros;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Curso;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Role;
@@ -12,12 +13,9 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuari
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoAluno;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroAluno;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosDetalhamentoAluno;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemAluno;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -64,6 +62,31 @@ public class AlunoController extends BaseController{
         return ResponseEntity.created(uri).body(new DadosDetalhamentoAluno(aluno));
     }
 
+    @PostMapping("/atualizarAluno")
+    @Transactional
+    public ResponseEntity atualizarAluno(@RequestBody @Valid DadosAtualizacaoAluno dados, UriComponentsBuilder uriBuilder){
+        //buscando curso por ID para atualizar o aaluno.
+        Optional<Curso> curso = cursoRepository.findById(dados.curso());
+        //busca o aluno pelo email
+        Aluno aluno = alunoRepository.findByUsuarioSistemaEmail(dados.usuarioSistema().getEmail());
+        if(curso.isPresent() && aluno != null) {
+            //Linha aabaixo serve para arrumar um erro que estava acontecendo devido a verificação de notBlank
+            //futuramente atuaalizaaar os metodos...
+            aluno.getUsuarioSistema().setSenha("$2a$12$NqhT08FMTFhq095R/M644OlJY3VgCvFaGK9jaXlV7mAW9KNU6e5e.");
+            aluno.atualizarInformacoes(dados, curso.get());
+            alunoRepository.save(aluno);
+            //spring cria a URI no metodo passa o complemento da url  passa o id do novo aluno .toURI cria objeto URI
+            var uri = uriBuilder.path("/alunos/{id}").buildAndExpand(aluno.getId()).toUri();
+            return ResponseEntity.created(uri).body(new DadosDetalhamentoAluno(aluno));
+        }
+        return ResponseEntity.badRequest().build();
+    }
+
+
+
+
+
+
     @GetMapping("alunos/buscarAlunos")
     public ResponseEntity<List<DadosListagemAluno>> buscarAlunos(){
         var lista = alunoRepository.findAll().stream().map(DadosListagemAluno::new).toList();
@@ -71,7 +94,7 @@ public class AlunoController extends BaseController{
         return ResponseEntity.ok(lista);
     }
 
-    @PutMapping("/atualizarAluno")
+    @PutMapping("/atualizarAlunoNaoMaisUtilizado")
     @Transactional
     public ResponseEntity atualizarAluno(@RequestBody @Valid DadosAtualizacaoAluno dadosAluno, @RequestHeader ("Authorization") String token){
         
@@ -83,7 +106,7 @@ public class AlunoController extends BaseController{
             return TratadorDeErros.tratarErro403();
         }
 
-        aluno.atualizarInformacoes(dadosAluno);
+        aluno.atualizarInformacoes(dadosAluno, null);
         return ResponseEntity.ok(new DadosDetalhamentoAluno(aluno)); //devolve um DTO
     }
 

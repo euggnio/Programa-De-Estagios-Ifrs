@@ -13,7 +13,6 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
     public class VagaController   {
         @Autowired
         VagaRepository vagaRepository;
-
         @Transactional
         @PostMapping("/cadastrarVaga")
         public ResponseEntity criarVaga(@RequestBody @Valid DadosVaga Dvaga, @RequestHeader("Authorization") String token){
@@ -52,5 +51,4 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
                     .toList();
             return ResponseEntity.ok(dadosVagas);
         }
-
     }
