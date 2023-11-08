@@ -2,8 +2,11 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.DocumentoRepository;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.SolicitacaoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DocumentoDto;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Documento;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -26,23 +29,34 @@ import java.util.Optional;
 public class DocumentoController {
     @Autowired
     DocumentoRepository documentoRepository;
+    @Autowired
+    SolicitacaoRepository solicitacaoRepository;
     @PostMapping("/salvarDocumento")
     @ResponseBody
-    public ResponseEntity salvarDocumentos(@RequestBody List<MultipartFile> documentos) {
-        Documento doc = new Documento();
-        for (MultipartFile documento : documentos) {
-            try {
-                byte[] bytesDocumento = documento.getBytes();
-                Blob blobDoc = new SerialBlob(bytesDocumento);
-                doc.setNome(documento.getOriginalFilename());
-                doc.setDocumento(blobDoc);
-                documentoRepository.save(doc);
-            } catch (IOException | SQLException e) {
-                return ResponseEntity.badRequest().build();
+    @Transactional
+    public ResponseEntity salvarDocumentos(@RequestPart("solicitacaoId") Long id,
+                                           @RequestParam("file") List<MultipartFile> documentos) {
+        Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
+        try {
+            if(documentoRepository.countBySolicitarEstagioId(id) > 8){
+                return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).body("Limite de dados atingido!!");
             }
+        for (MultipartFile documento : documentos) {
+            Documento doc = new Documento();
+            byte[] bytesDocumento = documento.getBytes();
+            Blob blobDoc = new SerialBlob(bytesDocumento);
+            doc.setNome(documento.getOriginalFilename());
+            doc.setDocumento(blobDoc);
+            doc.setSolicitarEstagio(solicitacao.get());
+            documentoRepository.save(doc);
         }
+            } catch (IOException | SQLException e) {
+                return ResponseEntity.badRequest().body("Algum erro ocorreu!");
+            }
         return ResponseEntity.ok().build();
     }
+
+
     @GetMapping("/downloadDocumento")
     public ResponseEntity<Resource> downloadArquivo(@RequestParam long chamadoId) {
         Optional<Documento> doc;
@@ -67,7 +81,7 @@ public class DocumentoController {
         Optional<Documento> doc = documentoRepository.findById(chamadoId);
         if(doc.isPresent()){
             documentoRepository.deleteById(chamadoId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Documento deletado");
         }
         else{
             return ResponseEntity.notFound().build();

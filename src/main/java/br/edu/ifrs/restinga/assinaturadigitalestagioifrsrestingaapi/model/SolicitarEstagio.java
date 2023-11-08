@@ -52,11 +52,13 @@ public class SolicitarEstagio {
 
     private String etapa;
 
+    private boolean editavel;
+
     private String observacao;
 
     private String resposta;
 
-    public SolicitarEstagio(Aluno aluno, Servidor servidor, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, String resposta, String statusEtapaCoordenador, String statusSetorEstagio, String statusEtapaDiretor) {
+    public SolicitarEstagio(Aluno aluno, Servidor servidor, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, boolean editavel, String resposta, String statusEtapaCoordenador, String statusSetorEstagio, String statusEtapaDiretor) {
         this.aluno = aluno;
         this.servidor = servidor;
         this.tipo = tipo;
@@ -67,6 +69,7 @@ public class SolicitarEstagio {
         this.titulo = aluno.getNomeCompleto();
         this.observacao = observacao;
         this.resposta = resposta;
+        this.editavel = editavel;
         this.statusEtapaCoordenador = statusEtapaCoordenador;
         this.statusSetorEstagio = statusSetorEstagio;
         this.statusEtapaDiretor = statusEtapaDiretor;

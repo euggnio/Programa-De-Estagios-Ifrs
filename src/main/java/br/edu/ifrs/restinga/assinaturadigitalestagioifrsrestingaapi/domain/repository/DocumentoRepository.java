@@ -11,4 +11,7 @@ import java.util.Optional;
 @Repository
 public interface DocumentoRepository extends JpaRepository<Documento,Long> {
     List<Documento> findBySolicitarEstagioId(Long solicitarEstagioId);
+
+    long countBySolicitarEstagioId(Long id);
+
 }

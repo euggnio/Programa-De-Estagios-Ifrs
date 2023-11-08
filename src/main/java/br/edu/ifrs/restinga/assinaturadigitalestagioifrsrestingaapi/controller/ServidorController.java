@@ -9,6 +9,8 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.securi
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Curso;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Servidor;
 
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuario;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,39 +26,47 @@ import java.util.Optional;
 @RestController
 @ResponseBody
 public class ServidorController extends BaseController {
-
-    // CRUD PARA CLASSE SERVIDOR
     @Autowired
     private ServidorImplementacao servidorImplementacao;
-
     @Autowired
     TokenService tokenService;
     @Autowired
     CursoRepository cursoRepository;
 
-
     @PostMapping("/cadastrarServidor")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity salvar(@RequestBody @Valid DadosCadastroServidor dadosCadastroServidor, UriComponentsBuilder uriBuilder) {
-        Optional<Curso> curso = cursoRepository.findById(dadosCadastroServidor.curso());
+        long idCurso = dadosCadastroServidor.curso();
+        Optional<Curso> curso = cursoRepository.findById(idCurso);
         if (curso.isEmpty()) {
             return servidorImplementacao.salvar(dadosCadastroServidor, null, uriBuilder);
         }
-        if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && dadosCadastroServidor.curso() != 15) {
+        if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && idCurso != 15) {
             return TratadorDeErros.tratarErro409("curso");
         }
         return servidorImplementacao.salvar(dadosCadastroServidor, curso.get(), uriBuilder);
 
     }
 
-
     @GetMapping("/buscarServidor/{id}")
     public ResponseEntity buscarServidrorId(@PathVariable Long id) {
         var servidor = servidorImplementacao.findId(id);
         return ResponseEntity.ok(servidor);
-
     }
 
+    @GetMapping("/excluirServidor/{id}")
+    @Transactional
+    public ResponseEntity excluirServidor(@PathVariable Long id) {
+            Optional<Usuario> user = usuarioRepository.findById(id);
+            if(user.isPresent()){
+                servidorRepository.deleteServidorByUsuarioSistema(user.get());
+                usuarioRepository.deleteById(id);
+                return ResponseEntity.ok().build();
+            }
+            else {
+                return ResponseEntity.badRequest().build();
+            }
+    }
 
     @GetMapping("/listarServidores")
     public ResponseEntity listarServidores() {
@@ -74,7 +84,6 @@ public class ServidorController extends BaseController {
     @GetMapping("/buscarServidoresPorEmail/{email}")
     public ResponseEntity buscarServidorPorEmail(@PathVariable String email) {
         var servidores = servidorImplementacao.listar();
-
         // Percorrer a lista de servidores e encontrar o servidor com o email correspondente
         Servidor servidorEncontrado = null;
         for (Servidor servidor : servidores) {
@@ -83,7 +92,6 @@ public class ServidorController extends BaseController {
                 break;
             }
         }
-
         if (servidorEncontrado != null) {
             return ResponseEntity.ok(servidorEncontrado);
         } else {

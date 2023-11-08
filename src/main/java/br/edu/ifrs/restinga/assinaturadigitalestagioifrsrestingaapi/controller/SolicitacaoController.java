@@ -2,7 +2,7 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.HistoricoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.FileImp;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.HistoricoSolicitacaoRepository;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SolicitacaoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoAluno;
@@ -29,30 +29,47 @@ public class SolicitacaoController extends BaseController{
     @Autowired
     private HistoricoSolicitacao historicoSolicitacao;
 
+    @Autowired
+    private SolicitacaoService solicitacaoService;
+
     @PostMapping(value = "/cadastrarSolicitacao")
     @Transactional
     public ResponseEntity cadastrarSolicitacao(@RequestPart("dados") DadosCadastroSolicitacao dados,
                                                @RequestParam("file") List<MultipartFile> file){
+        if(solicitacaoService.verificarSolicitacaoExistente(dados.alunoId(),dados.tipo())){
+            return ResponseEntity.badRequest().body("Você já possui uma solicitação deste tipo!");
+        }
+        else {
+            if (servidorRepository.existsServidorByCurso_IdEquals(dados.cursoId())) {
+                Optional<Servidor> servidor = servidorRepository.findServidorByCurso_Id(dados.cursoId());
+                System.out.println("Dados slt: " + dados.alunoId());
+                System.out.println("Dados slt: " + dados.cursoId());
+                System.out.println("Dados slt: " + dados.tipo());
+                System.out.println("Dados file: " + file.size());
+                System.out.println("Dados slt: " + dados.status());
+                Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
 
-        if (servidorRepository.existsServidorByCurso_IdEquals(dados.cursoId())) {
-           Optional<Servidor> servidor = servidorRepository.findServidorByCurso_Id(dados.cursoId());
-        System.out.println("Dados slt: " + dados.alunoId());
-        System.out.println("Dados slt: " + dados.cursoId());
-        System.out.println("Dados slt: " + dados.tipo());
-        System.out.println("Dados file: " + file.size());
-        System.out.println("Dados slt: " + dados.status());
-        Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
+                SolicitarEstagio solicitarEstagio = new SolicitarEstagio(aluno.get()
+                        , servidor.get(), dados.tipo()
+                        , dados.titulo()
+                        , dados.conteudo()
+                        , dados.observacao()
+                        , "Nova"
+                        , "1"
+                        , true
+                        , ""
+                        , ""
+                        , ""
+                        , "");
 
-
-        SolicitarEstagio solicitarEstagio = new SolicitarEstagio(aluno.get(), servidor.get(),dados.tipo(), dados.titulo(), dados.conteudo(), dados.observacao(), "Em Andamento", "2", "", "", "Em Andamento", "");
-        fileImp.SaveDocBlob(file,solicitarEstagio);
-        solicitacaoRepository.save(solicitarEstagio);
-        historicoSolicitacao.mudarSolicitacao(solicitarEstagio, "Enviado");
-        return ResponseEntity.ok().build();
-    }
-    else{
-        return ResponseEntity.notFound().build();
-    }
+                fileImp.SaveDocBlob(file, solicitarEstagio, false);
+                solicitacaoRepository.save(solicitarEstagio);
+                historicoSolicitacao.mudarSolicitacao(solicitarEstagio, "Cadastrado");
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        }
     }
 
     @GetMapping("/listarDocumentos")
@@ -139,8 +156,20 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
     @GetMapping("/alunoSolicitacao/{id}")
     public ResponseEntity<DadosListagemSolicitacaoAluno> getAlunoSolicitacao(@PathVariable("id") Long id) {
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
+
         if (solicitacao.isPresent()) {
             DadosListagemSolicitacaoAluno dadosSolicitacao = new DadosListagemSolicitacaoAluno(solicitacao.get());
+
+            if(solicitacao.get().getStatus().equals("Nova")){
+
+                SolicitarEstagio sl;
+                sl = solicitacao.get();
+                sl.setStatus("Em andamento");
+                sl.setEtapa("2");
+                sl.setEditavel(false);
+                solicitacaoRepository.save(sl);
+            }
+
             return ResponseEntity.ok(dadosSolicitacao);
         } else {
             return ResponseEntity.notFound().build();
@@ -162,6 +191,8 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
             solicitacaoDTO.statusEtapaSetorEstagio();
             solicitacaoDTO.observacao();
             solicitacaoDTO.status();
+
+
 
             return ResponseEntity.ok(solicitacaoDTO);
         } else {
@@ -195,7 +226,6 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(email);
         Optional<SolicitarEstagio> solicitacaoOptional = solicitacaoRepository.findById(id);
-        System.out.println("AQUI ESTA A ROLE "+servidor.getRole());
         String deferido = "Deferido";
 
         if (!solicitacaoOptional.isPresent()) {
@@ -229,6 +259,7 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
 
         if (servidor.getRole().getId() == 3) {
             solicitacao.setStatusSetorEstagio(dados.statusEtapaSetorEstagio()); // status setor estagio
+            historicoSolicitacao.mudarSolicitacao(solicitacao, deferido);
             solicitacao.setEtapa("3");
             solicitacao.setStatusEtapaCoordenador("Em Andamento");
             historicoSolicitacao.mudarSolicitacao(solicitacao, deferido);
@@ -250,7 +281,7 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
 
 
         if (files != null && !files.isEmpty()) {
-            fileImp.SaveDocBlob(files, solicitacao);
+            fileImp.SaveDocBlob(files, solicitacao, true);
         }
 
         solicitacaoRepository.save(solicitacao);

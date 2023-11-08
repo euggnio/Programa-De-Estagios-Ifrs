@@ -17,7 +17,7 @@ import java.util.List;
 public class FileImp extends BaseController{
 
     @Transactional
-    public boolean SaveDocBlob(List<MultipartFile> docs, SolicitarEstagio solicitacaoId) {
+    public boolean SaveDocBlob(List<MultipartFile> docs, SolicitarEstagio solicitacaoId, boolean assinado) {
         try {
             for (MultipartFile doc : docs) {
                 Documento documento = new Documento();
@@ -25,6 +25,7 @@ public class FileImp extends BaseController{
                 Blob blobDoc = new SerialBlob(bytesDocumento);
                 documento.setNome(doc.getOriginalFilename());
                 documento.setDocumento(blobDoc);
+                documento.setAssinado(assinado);
                 documento.setSolicitarEstagio(solicitacaoId);
                 documentoRepository.save(documento);
             }
