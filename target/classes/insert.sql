@@ -13,6 +13,8 @@ FROM (
   SELECT '14', 'Processos Gerenciais'
   UNION ALL
   SELECT '15', 'Setor Estágio'
+  UNION ALL
+  SELECT '16', 'Diretor'
 ) AS dados
 WHERE NOT EXISTS (
   SELECT 1

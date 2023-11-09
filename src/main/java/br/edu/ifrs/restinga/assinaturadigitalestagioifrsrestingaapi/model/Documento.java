@@ -21,6 +21,8 @@ public class Documento {
     private SolicitarEstagio solicitarEstagio;
     @Column
     private String nome;
+    @Column
+    public boolean assinado;
     @Lob
     private Blob documento;
 }

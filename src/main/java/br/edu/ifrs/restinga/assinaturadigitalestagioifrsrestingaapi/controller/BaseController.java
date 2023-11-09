@@ -14,7 +14,7 @@ public class BaseController {
     AlunoRepository alunoRepository;
 
     @Autowired
-    SolicitacaoRepository solicitacaoRepository;
+    public SolicitacaoRepository solicitacaoRepository;
 
     @Autowired
     public UsuarioRepository usuarioRepository;
