@@ -66,9 +66,6 @@ public class AutenticacaoController extends BaseController {
             if(usuarioRepository.findByEmail(dados.email())!= null){
                 return TratadorDeErros.tratarErro409("email");
             }
-            if (!emailValidator.validaEmail(dados.email())) {
-                return TratadorDeErros.tratarErro400(HttpStatus.BAD_REQUEST);
-            }
             var usuarioSistema = new Usuario(
                     dados.email(),
                     roles.get(),
@@ -88,7 +85,7 @@ public class AutenticacaoController extends BaseController {
             var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());
             Autenticacao response = new Autenticacao(tokenJWT,aluno.getRole().getName());
 
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok(response);
         }
     }
 
