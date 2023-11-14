@@ -13,7 +13,7 @@ public record DadosCadastroServidor(
         @NotBlank
          String cargo,
         @Nullable
-        long curso,
+        Curso curso,
         @NotNull @Valid
          Usuario usuarioSistema
 

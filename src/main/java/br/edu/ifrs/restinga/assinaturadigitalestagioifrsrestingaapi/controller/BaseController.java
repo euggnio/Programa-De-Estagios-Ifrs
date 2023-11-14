@@ -30,6 +30,9 @@ public class BaseController {
     public DocumentoRepository documentoRepository;
 
     @Autowired
+    public CursoRepository cursoRepository;
+
+    @Autowired
     protected
     EmailValidator emailValidator;
 

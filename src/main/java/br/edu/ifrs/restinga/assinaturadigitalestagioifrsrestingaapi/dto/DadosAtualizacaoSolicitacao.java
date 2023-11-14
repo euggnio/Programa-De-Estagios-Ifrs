@@ -16,6 +16,8 @@ public record DadosAtualizacaoSolicitacao(
         @NotBlank
         String statusEtapaCoordenador,
 
+        boolean editavel,
+
         @NotBlank
         String statusEtapaDiretor,
 

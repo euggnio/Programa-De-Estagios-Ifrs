@@ -7,10 +7,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtu
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoAluno;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoServidor;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Documento;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Servidor;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -40,17 +37,16 @@ public class SolicitacaoController extends BaseController{
             return ResponseEntity.badRequest().body("Você já possui uma solicitação deste tipo!");
         }
         else {
-            if (servidorRepository.existsServidorByCurso_IdEquals(dados.cursoId())) {
-                Optional<Servidor> servidor = servidorRepository.findServidorByCurso_Id(dados.cursoId());
-                System.out.println("Dados slt: " + dados.alunoId());
-                System.out.println("Dados slt: " + dados.cursoId());
-                System.out.println("Dados slt: " + dados.tipo());
-                System.out.println("Dados file: " + file.size());
-                System.out.println("Dados slt: " + dados.status());
-                Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
-
+            Optional<Curso> curso = cursoRepository.findById(dados.cursoId());
+            System.out.println("Dados slt: " + dados.alunoId());
+            System.out.println("Dados slt: " + dados.cursoId());
+            System.out.println("Dados slt: " + dados.tipo());
+            System.out.println("Dados file: " + file.size());
+            System.out.println("Dados slt: " + dados.status());
+            Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
+            if (aluno.isPresent() && curso.isPresent()) {
                 SolicitarEstagio solicitarEstagio = new SolicitarEstagio(aluno.get()
-                        , servidor.get(), dados.tipo()
+                        , curso.get(), dados.tipo()
                         , dados.titulo()
                         , dados.conteudo()
                         , dados.observacao()
@@ -66,8 +62,9 @@ public class SolicitacaoController extends BaseController{
                 solicitacaoRepository.save(solicitarEstagio);
                 historicoSolicitacao.mudarSolicitacao(solicitarEstagio, "Cadastrado");
                 return ResponseEntity.ok().build();
-            } else {
-                return ResponseEntity.notFound().build();
+            }
+            else{
+                return ResponseEntity.badRequest().build();
             }
         }
     }
@@ -77,6 +74,22 @@ public class SolicitacaoController extends BaseController{
     public String listar(@RequestParam long id){
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         return solicitacao.get().getDocumento().get(1).getNome();
+    }
+
+    @GetMapping("/editarSolicitacao")
+    public ResponseEntity setEditavel(@RequestParam long id, @RequestHeader("Authorization") String token){
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        System.out.println("EMAIL: " + email);
+        solicitacaoRepository.atualizarEditavelParaTrue(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/editarobservacaoSolicitacao")
+    public ResponseEntity setObservacao(@RequestParam long id, @RequestParam String texto, @RequestHeader("Authorization") String token){
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        System.out.println("EMAIL: " + email + " " + texto);
+        solicitacaoRepository.atualizarObservacao(id, texto);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/dadosSolicitacaoAluno")
@@ -92,7 +105,6 @@ public class SolicitacaoController extends BaseController{
         return ResponseEntity.ok(dadosSolicitacoes);
     }
 
-    
     @GetMapping("/listarSolicitacoes")
     public ResponseEntity<List<SolicitarEstagio>> listarSolicitacoes() {
         var solicitacoes = solicitacaoRepository.findAll();
@@ -102,11 +114,8 @@ public class SolicitacaoController extends BaseController{
             return ResponseEntity.ok(solicitacoes);
         }
     }
-    
 
-
-    
-    @GetMapping("/listarSolicitacoesPorServidor/{servidorId}")
+/*    @GetMapping("/listarSolicitacoesPorServidor/{servidorId}")
     public ResponseEntity<List<SolicitarEstagio>> listarSolicitacoesPorServidor(@PathVariable("servidorId") Long servidorId) {
         var servidor = servidorRepository.findById(servidorId);
         if (servidor.isPresent()) {
@@ -119,9 +128,8 @@ public class SolicitacaoController extends BaseController{
         }
             return ResponseEntity.notFound().build();
 
-    }
-        
-    //teste
+    }*/
+
   @GetMapping("/dadosSolicitacaoTeste")
 public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
     List<SolicitarEstagio> solicitacoes = solicitacaoRepository.findAll();
@@ -137,14 +145,18 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
     public ResponseEntity<List<DadosListagemSolicitacaoServidor>> listarSolicitacoesPorEmailServidor(@RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
-        List<SolicitarEstagio> solicitacoes;
+
+        List<SolicitarEstagio> solicitacoes = null;
         if(servidor.getCargo().equals("Coordenador")){
-           solicitacoes = solicitacaoRepository.findByServidorAndEtapaIsGreaterThanEqual(servidor, "2");
+            Optional<Curso> curso = cursoRepository.findById(servidor.getCurso().getId());
+            solicitacoes = solicitacaoRepository.findByCursoAndEtapaIsGreaterThanEqual(curso.get(), "2");
         }
-        else if(servidor.getRole().equals("Diretor")){
-            solicitacoes = solicitacaoRepository.findByServidorAndEtapaIsGreaterThanEqual(servidor, "4");
+        else if(servidor.getCargo().equals("Diretor")){
+            System.out.println("GOGOGO");
+            solicitacoes = solicitacaoRepository.findAllByEtapaIsGreaterThanEqual("4");
         }
         else {
+            System.out.println(servidor.getRole() + " " + servidor.getCargo());
             solicitacoes = solicitacaoRepository.findAll();
         }
 
@@ -156,12 +168,9 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
     @GetMapping("/alunoSolicitacao/{id}")
     public ResponseEntity<DadosListagemSolicitacaoAluno> getAlunoSolicitacao(@PathVariable("id") Long id) {
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
-
         if (solicitacao.isPresent()) {
             DadosListagemSolicitacaoAluno dadosSolicitacao = new DadosListagemSolicitacaoAluno(solicitacao.get());
-
             if(solicitacao.get().getStatus().equals("Nova")){
-
                 SolicitarEstagio sl;
                 sl = solicitacao.get();
                 sl.setStatus("Em andamento");
@@ -169,38 +178,41 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
                 sl.setEditavel(false);
                 solicitacaoRepository.save(sl);
             }
-
             return ResponseEntity.ok(dadosSolicitacao);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
 
+
+
     @GetMapping("/solicitacao/{id}")
     public ResponseEntity<DadosAtualizacaoSolicitacao> getSolicitacaoById(@PathVariable("id") Long id) {
         Optional<SolicitarEstagio> solicitacaoOptional = solicitacaoRepository.findById(id);
         if (solicitacaoOptional.isPresent()) {
             SolicitarEstagio solicitacao = solicitacaoOptional.get();
-
-            DadosAtualizacaoSolicitacao solicitacaoDTO = new DadosAtualizacaoSolicitacao(solicitacao.getId(),solicitacao.getStatus(), solicitacao.getEtapa(), solicitacao.getStatusSetorEstagio(),
-                    solicitacao.getStatusEtapaCoordenador(), solicitacao.getStatusEtapaDiretor(), solicitacao.getObservacao());
+            DadosAtualizacaoSolicitacao solicitacaoDTO = new DadosAtualizacaoSolicitacao(solicitacao.getId()
+                    ,solicitacao.getStatus()
+                    ,solicitacao.getEtapa()
+                    ,solicitacao.getStatusSetorEstagio()
+                    ,solicitacao.getStatusEtapaCoordenador()
+                    ,solicitacao.isEditavel()
+                    ,solicitacao.getStatusEtapaDiretor()
+                    ,solicitacao.getObservacao());
 
             solicitacaoDTO.statusEtapaDiretor();
             solicitacaoDTO.statusEtapaCoordenador();
             solicitacaoDTO.etapa();
+            solicitacaoDTO.editavel();
             solicitacaoDTO.statusEtapaSetorEstagio();
             solicitacaoDTO.observacao();
             solicitacaoDTO.status();
-
-
 
             return ResponseEntity.ok(solicitacaoDTO);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
-
-
 
     @GetMapping("/documentosSolicitacao/{id}")
     public ResponseEntity<List<Documento>> getDocumentosSolicitacao(@PathVariable("id") Long id) {

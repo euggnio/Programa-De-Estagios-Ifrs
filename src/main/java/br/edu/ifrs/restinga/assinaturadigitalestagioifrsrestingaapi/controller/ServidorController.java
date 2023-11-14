@@ -36,12 +36,13 @@ public class ServidorController extends BaseController {
     @PostMapping("/cadastrarServidor")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity salvar(@RequestBody @Valid DadosCadastroServidor dadosCadastroServidor, UriComponentsBuilder uriBuilder) {
-        long idCurso = dadosCadastroServidor.curso();
-        Optional<Curso> curso = cursoRepository.findById(idCurso);
+        Optional<Curso> curso = cursoRepository.findById(dadosCadastroServidor.curso().getId());
+        System.out.println("PASSOY");
+
         if (curso.isEmpty()) {
             return servidorImplementacao.salvar(dadosCadastroServidor, null, uriBuilder);
         }
-        if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && idCurso != 15) {
+        if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && dadosCadastroServidor.curso().getId() != 15) {
             return TratadorDeErros.tratarErro409("curso");
         }
         return servidorImplementacao.salvar(dadosCadastroServidor, curso.get(), uriBuilder);

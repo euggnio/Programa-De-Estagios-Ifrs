@@ -37,7 +37,7 @@ public class SolicitarEstagio {
 
     private String statusEtapaDiretor;
 
-    @OneToOne Servidor servidor;
+    @OneToOne Curso curso;
 
     @OneToMany(mappedBy = "solicitarEstagio", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JsonManagedReference
@@ -58,9 +58,9 @@ public class SolicitarEstagio {
 
     private String resposta;
 
-    public SolicitarEstagio(Aluno aluno, Servidor servidor, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, boolean editavel, String resposta, String statusEtapaCoordenador, String statusSetorEstagio, String statusEtapaDiretor) {
+    public SolicitarEstagio(Aluno aluno, Curso curso, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, boolean editavel, String resposta, String statusEtapaCoordenador, String statusSetorEstagio, String statusEtapaDiretor) {
         this.aluno = aluno;
-        this.servidor = servidor;
+        this.curso = curso;
         this.tipo = tipo;
         this.dataSolicitacao = LocalDateTime.now();
         this.status = status;

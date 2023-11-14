@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Objects;
 import java.util.Optional;
 
 
@@ -29,7 +30,6 @@ public class AutenticacaoController extends BaseController {
 
     @Autowired
     private AuthenticationManager manager;
-
     @Autowired
     private TokenService tokenService;
 
@@ -39,7 +39,6 @@ public class AutenticacaoController extends BaseController {
         var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(),dados.senha());
         var authenticacao = manager.authenticate(authenticationToken);
         var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());
-
         Autenticacao response = new Autenticacao(tokenJWT,role.getRoles().getName());
         return ResponseEntity.ok(response);
     }
@@ -48,13 +47,11 @@ public class AutenticacaoController extends BaseController {
     public ResponseEntity efetuarLoginGoogle(@RequestBody DadosAutenticacaoGoogle dados, UriComponentsBuilder uriBuilder){
         System.out.println("DATA  " + dados.email());
         System.out.println("Data:" +dados.toString() + " ");
-
         if(usuarioRepository.existsByEmail(dados.email())){
             Usuario role =(Usuario) usuarioRepository.findByEmail(dados.email());
             var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(),dados.sub());
             var authenticacao = manager.authenticate(authenticationToken);
             var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());
-
             Autenticacao response = new Autenticacao(tokenJWT,role.getRoles().getName());
             return ResponseEntity.ok(response);
         }
@@ -73,15 +70,11 @@ public class AutenticacaoController extends BaseController {
                     dados.email(),
                     roles.get(),
                     passwordEncoder.encode(dados.sub())
-
             );
             aluno.setUsuarioSistema(usuarioSistema);
-
             usuarioRepository.save(aluno.getUsuarioSistema());
             alunoRepository.save(aluno);
-
             System.out.println("ALUNO CADASTRADO PELO GOOGLE");
-
             var uri = uriBuilder.path("/alunos/{id}").buildAndExpand(aluno.getId()).toUri();
             var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(), dados.sub());
             var authenticacao = manager.authenticate(authenticationToken);
@@ -94,10 +87,11 @@ public class AutenticacaoController extends BaseController {
 
     @PostMapping("/googleLogin")
     public ResponseEntity LoginGoogle(@RequestBody DadosAutenticacaoGoogle dados){
-        System.out.println("DATA aawdawda " + dados.email());
-
-
-        return ResponseEntity.ok("ok :D");
+        if(Objects.equals(dados.email_verified(), "true")){
+            System.out.println("Efetuado login por google" + dados.email());
+            return ResponseEntity.ok("Logado pelo google");
+        }
+        return ResponseEntity.badRequest().build();
     }
 
 }

@@ -42,17 +42,15 @@ public class ServidorImplementacao extends BaseController {
 
 	@Transactional
 	public ResponseEntity salvar(DadosCadastroServidor dadosCadastroServidor, Curso curso, UriComponentsBuilder uriBuilder) {
-
-		Optional<Role> role = null;
-		if(dadosCadastroServidor.cargo().equals(cargo[0].toString())){
+		Optional<Role> role = Optional.empty();
+		if(dadosCadastroServidor.cargo().equals(cargo[0])){
 			role = roleRepository.findById(2L);
-		}else if(dadosCadastroServidor.cargo().equals(cargo[1].toString())) {
+		}else if(dadosCadastroServidor.cargo().equals(cargo[1])) {
 			role = roleRepository.findById(3L);
-		} else if (dadosCadastroServidor.cargo().equalsIgnoreCase(cargo[2].toString())) {
+		} else if (dadosCadastroServidor.cargo().equalsIgnoreCase(cargo[2])) {
 			role = roleRepository.findById(4L);
 		}
-
-
+		System.out.println("PASSOY");
 		var servidor = new Servidor(dadosCadastroServidor, curso,role.get());
 
 		if(usuarioRepository.findByEmail(dadosCadastroServidor.usuarioSistema().getEmail())!= null){
