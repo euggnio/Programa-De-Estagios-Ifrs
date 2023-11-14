@@ -79,7 +79,6 @@ public class ServidorImplementacao extends BaseController {
 
 
 	public List<Servidor> listar() {
-		// TODO Auto-generated method stub
 		return manager.createQuery("from Servidor", Servidor.class).getResultList();
 	}
 	
