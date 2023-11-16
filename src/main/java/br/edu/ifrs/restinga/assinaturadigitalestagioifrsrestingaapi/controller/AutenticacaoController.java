@@ -33,6 +33,7 @@ public class AutenticacaoController extends BaseController {
     @Autowired
     private TokenService tokenService;
 
+    //Service para cadastro?
     @PostMapping
     public ResponseEntity efetuarLogin(@RequestBody @Valid DadosAutenticacao dados){
         Usuario role =(Usuario) usuarioRepository.findByEmail(dados.email());
@@ -45,8 +46,6 @@ public class AutenticacaoController extends BaseController {
 
     @PostMapping("/google")
     public ResponseEntity efetuarLoginGoogle(@RequestBody DadosAutenticacaoGoogle dados, UriComponentsBuilder uriBuilder){
-        System.out.println("DATA  " + dados.email());
-        System.out.println("Data:" +dados.toString() + " ");
         if(usuarioRepository.existsByEmail(dados.email())){
             Usuario role =(Usuario) usuarioRepository.findByEmail(dados.email());
             var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(),dados.sub());
@@ -57,7 +56,6 @@ public class AutenticacaoController extends BaseController {
         }
         else{
             System.out.println("AQUI");
-            //buscando curso por ID para salvar no aluno pelo construtor.
             Optional<Role> roles = roleRepository.findById(1L);
             var aluno = new Aluno(dados,roles.get());
             if(usuarioRepository.findByEmail(dados.email())!= null){
@@ -71,8 +69,6 @@ public class AutenticacaoController extends BaseController {
             aluno.setUsuarioSistema(usuarioSistema);
             usuarioRepository.save(aluno.getUsuarioSistema());
             alunoRepository.save(aluno);
-            System.out.println("ALUNO CADASTRADO PELO GOOGLE");
-            var uri = uriBuilder.path("/alunos/{id}").buildAndExpand(aluno.getId()).toUri();
             var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(), dados.sub());
             var authenticacao = manager.authenticate(authenticationToken);
             var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());

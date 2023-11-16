@@ -22,7 +22,7 @@ public class Documento {
     @Column
     private String nome;
     @Column
-    public boolean assinado;
+    private boolean assinado;
     @Lob
     private Blob documento;
 }
