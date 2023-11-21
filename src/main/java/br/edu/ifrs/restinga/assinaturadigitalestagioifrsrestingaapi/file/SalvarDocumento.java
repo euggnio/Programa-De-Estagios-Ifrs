@@ -1,5 +1,7 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file;
 
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -11,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SalvarDocumento {
+
+
 
     public String salvar(MultipartFile documento, int chamadoId) throws IOException {
         String nomeArquivo = documento.getOriginalFilename();

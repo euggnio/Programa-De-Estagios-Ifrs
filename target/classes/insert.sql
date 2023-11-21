@@ -41,3 +41,25 @@ WHERE NOT EXISTS (
         WHERE roles.id = dados.id
           AND roles.name = dados.name
     );
+
+INSERT INTO usuarios (email, senha, roles_id)
+SELECT 'admin@restinga.ifrs.edu.br', '$2a$12$6EloNIdl/tEaAgMdUuklMeHBPlQf7Ub5d8Bu9aXdbcC5wkAbBFjAi', '3'
+FROM (
+         SELECT 'admin@restinga.ifrs.edu.br' AS email
+     ) AS dados
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM usuarios
+    WHERE usuarios.email = dados.email
+);
+
+INSERT INTO servidores (cargo, nome, curso_id, role_id, usuario_sistema_id)
+SELECT 'Setor estágio' AS cargo, 'admin' AS nome, 15 AS curso_id, 3 AS role_id, 1 AS usuario_sistema_id
+FROM dual
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM servidores
+    WHERE
+          servidores.cargo = 'Setor estágio'
+      AND servidores.nome = 'admin'
+);

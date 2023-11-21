@@ -92,6 +92,25 @@ public class SolicitacaoController extends BaseController{
         return ResponseEntity.ok().build();
     }
 
+    //arrumar isso aqui com switch case :D
+    @GetMapping("/editarstatus")
+    public ResponseEntity setSolicitacao(@RequestParam long id, @RequestParam String status, @RequestHeader("Authorization") String token){
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(email);
+        solicitacaoService.atualizarStatus(id,status,servidor);
+        return  ResponseEntity.ok().build();
+    }
+
+
+    @GetMapping("/editarEtapa")
+    public ResponseEntity setEtapa(@RequestParam long id, @RequestParam String etapa, @RequestHeader("Authorization") String token){
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        System.out.println("EMAIL: " + email + " " + etapa);
+        solicitacaoRepository.atualizarEtapa(id, etapa);
+        return ResponseEntity.ok().build();
+    }
+
+
     @GetMapping("/dadosSolicitacaoAluno")
     public ResponseEntity<List<DadosListagemSolicitacaoAluno>> obterSolicitacoes(@RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
@@ -273,6 +292,7 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
             solicitacao.setStatusSetorEstagio(dados.statusEtapaSetorEstagio()); // status setor estagio
             historicoSolicitacao.mudarSolicitacao(solicitacao, deferido);
             solicitacao.setEtapa("3");
+            solicitacao.setStatusSetorEstagio("Deferido");
             solicitacao.setStatusEtapaCoordenador("Em Andamento");
             historicoSolicitacao.mudarSolicitacao(solicitacao, deferido);
         }
@@ -295,7 +315,8 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
         if (files != null && !files.isEmpty()) {
             fileImp.SaveDocBlob(files, solicitacao, true);
         }
-
+        solicitacao.setEditavel(false);
+        solicitacao.setObservacao("");
         solicitacaoRepository.save(solicitacao);
         //historicoSolicitacao.mudarSolicitacao(solicitacao);
         return ResponseEntity.ok().build();
@@ -354,7 +375,7 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
             if (dados.observacao() != null) {
                 solicitacao.setObservacao(dados.observacao());
             }
-
+            solicitacao.setEditavel(false);
             solicitacaoRepository.save(solicitacao);
             //historicoSolicitacao.mudarSolicitacao(solicitacao);
             return ResponseEntity.ok().build();

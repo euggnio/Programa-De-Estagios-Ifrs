@@ -37,23 +37,26 @@ public class DocumentoController {
     public ResponseEntity salvarDocumentos(@RequestPart("solicitacaoId") Long id,
                                            @RequestParam("file") List<MultipartFile> documentos) {
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
-        try {
-            if(documentoRepository.countBySolicitarEstagioId(id) > 8){
-                return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).body("Limite de dados atingido!!");
+        if (solicitacao.get().isEditavel()) {
+            try {
+                if(documentoRepository.countBySolicitarEstagioId(id) > 8){
+                    return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).body("Limite de dados atingido!!");
+                }
+            for (MultipartFile documento : documentos) {
+                Documento doc = new Documento();
+                byte[] bytesDocumento = documento.getBytes();
+                Blob blobDoc = new SerialBlob(bytesDocumento);
+                doc.setNome(documento.getOriginalFilename());
+                doc.setDocumento(blobDoc);
+                doc.setSolicitarEstagio(solicitacao.get());
+                documentoRepository.save(doc);
+                return ResponseEntity.ok().build();
             }
-        for (MultipartFile documento : documentos) {
-            Documento doc = new Documento();
-            byte[] bytesDocumento = documento.getBytes();
-            Blob blobDoc = new SerialBlob(bytesDocumento);
-            doc.setNome(documento.getOriginalFilename());
-            doc.setDocumento(blobDoc);
-            doc.setSolicitarEstagio(solicitacao.get());
-            documentoRepository.save(doc);
+                } catch (IOException | SQLException e) {
+                    return ResponseEntity.badRequest().body("Algum erro ocorreu!");
+                }
         }
-            } catch (IOException | SQLException e) {
-                return ResponseEntity.badRequest().body("Algum erro ocorreu!");
-            }
-        return ResponseEntity.ok().build();
+        return ResponseEntity.badRequest().body("Impossivel adicionar documentos!");
     }
 
 

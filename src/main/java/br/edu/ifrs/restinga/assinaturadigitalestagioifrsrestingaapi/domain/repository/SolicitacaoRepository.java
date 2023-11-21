@@ -15,7 +15,7 @@ public interface SolicitacaoRepository  extends JpaRepository<SolicitarEstagio,L
     List<SolicitarEstagio> findByAluno(Aluno aluno);
 //    List<SolicitarEstagio> findByServidor(Servidor servidor);
 
-    int countByAluno_IdAndTipo(Long aluno, String tipo);
+    int countByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status);
 
     List<SolicitarEstagio> findAllByEtapaIsGreaterThanEqual(String etapa);
     List<SolicitarEstagio> findByCursoAndEtapaIsGreaterThanEqual(Curso curso, String etapa);
@@ -29,6 +29,17 @@ public interface SolicitacaoRepository  extends JpaRepository<SolicitarEstagio,L
     @Modifying
     @Query( value = "UPDATE solicitar_estagio s SET s.observacao =:texto WHERE id = :solicitacaoId", nativeQuery = true)
     void atualizarObservacao(Long solicitacaoId, String texto);
+
+    @Transactional
+    @Modifying
+    @Query( value = "UPDATE solicitar_estagio s SET s.status =:texto WHERE id = :solicitacaoId", nativeQuery = true)
+    void atualizarStataus(Long solicitacaoId, String texto);
+
+    @Transactional
+    @Modifying
+    @Query( value = "UPDATE solicitar_estagio s SET s.etapa =:texto WHERE id = :solicitacaoId", nativeQuery = true)
+    void atualizarEtapa(Long solicitacaoId, String texto);
+
 
 
 }
