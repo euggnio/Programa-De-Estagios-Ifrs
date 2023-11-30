@@ -30,43 +30,12 @@ public class SolicitacaoController extends BaseController{
     private SolicitacaoService solicitacaoService;
 
     @PostMapping(value = "/cadastrarSolicitacao")
-    @Transactional
     public ResponseEntity cadastrarSolicitacao(@RequestPart("dados") DadosCadastroSolicitacao dados,
-                                               @RequestParam("file") List<MultipartFile> file){
-        if(solicitacaoService.verificarSolicitacaoExistente(dados.alunoId(),dados.tipo())){
-            return ResponseEntity.badRequest().body("Você já possui uma solicitação deste tipo!");
+                                               @RequestParam("file") List<MultipartFile> arquivos) {
+        if (solicitacaoService.verificarSolicitacaoExistente(dados.alunoId(), dados.tipo())) {
+            return ResponseEntity.badRequest().body("Você já possui uma solicitação deste tipo em andamento!");
         }
-        else {
-            Optional<Curso> curso = cursoRepository.findById(dados.cursoId());
-            System.out.println("Dados slt: " + dados.alunoId());
-            System.out.println("Dados slt: " + dados.cursoId());
-            System.out.println("Dados slt: " + dados.tipo());
-            System.out.println("Dados file: " + file.size());
-            System.out.println("Dados slt: " + dados.status());
-            Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
-            if (aluno.isPresent() && curso.isPresent()) {
-                SolicitarEstagio solicitarEstagio = new SolicitarEstagio(aluno.get()
-                        , curso.get(), dados.tipo()
-                        , dados.titulo()
-                        , dados.conteudo()
-                        , dados.observacao()
-                        , "Nova"
-                        , "1"
-                        , true
-                        , ""
-                        , ""
-                        , ""
-                        , "");
-
-                fileImp.SaveDocBlob(file, solicitarEstagio, false);
-                solicitacaoRepository.save(solicitarEstagio);
-                historicoSolicitacao.mudarSolicitacao(solicitarEstagio, "Cadastrado");
-                return ResponseEntity.ok().build();
-            }
-            else{
-                return ResponseEntity.badRequest().build();
-            }
-        }
+        return solicitacaoService.cadastrarSolicitacao(dados, arquivos);
     }
 
     @GetMapping("/listarDocumentos")
@@ -86,79 +55,45 @@ public class SolicitacaoController extends BaseController{
 
     @GetMapping("/editarobservacaoSolicitacao")
     public ResponseEntity setObservacao(@RequestParam long id, @RequestParam String texto, @RequestHeader("Authorization") String token){
-        String email = tokenService.getSubject(token.replace("Bearer ", ""));
-        System.out.println("EMAIL: " + email + " " + texto);
-        solicitacaoRepository.atualizarObservacao(id, texto);
-        return ResponseEntity.ok().build();
+        if(usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+            solicitacaoRepository.atualizarObservacao(id, texto);
+            return ResponseEntity.ok().build();
+        }
+            return ResponseEntity.badRequest().build();
     }
 
-    //arrumar isso aqui com switch case :D
     @GetMapping("/editarstatus")
     public ResponseEntity setSolicitacao(@RequestParam long id, @RequestParam String status, @RequestHeader("Authorization") String token){
-        String email = tokenService.getSubject(token.replace("Bearer ", ""));
-        Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(email);
+        Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(tokenService.getSubject(token.replace("Bearer ", "")));
         solicitacaoService.atualizarStatus(id,status,servidor);
         return  ResponseEntity.ok().build();
     }
 
-
+    //?Verificar se a edição da etapa reseta os status da etapa no coordenador e diretor.
     @GetMapping("/editarEtapa")
     public ResponseEntity setEtapa(@RequestParam long id, @RequestParam String etapa, @RequestHeader("Authorization") String token){
-        String email = tokenService.getSubject(token.replace("Bearer ", ""));
-        System.out.println("EMAIL: " + email + " " + etapa);
-        solicitacaoRepository.atualizarEtapa(id, etapa);
-        return ResponseEntity.ok().build();
+        if(usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+            solicitacaoRepository.atualizarEtapa(id, etapa);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.badRequest().build();
     }
-
 
     @GetMapping("/dadosSolicitacaoAluno")
     public ResponseEntity<List<DadosListagemSolicitacaoAluno>> obterSolicitacoes(@RequestHeader("Authorization") String token) {
-        String email = tokenService.getSubject(token.replace("Bearer ", ""));
-        Aluno aluno = alunoRepository.findByUsuarioSistemaEmail(email);
-
-        List<SolicitarEstagio> solicitacoes = solicitacaoRepository.findByAluno(aluno);
-        List<DadosListagemSolicitacaoAluno> dadosSolicitacoes = solicitacoes.stream()
+        Aluno aluno = alunoRepository.findByUsuarioSistemaEmail(tokenService.getSubject(token.replace("Bearer ", "")));
+        return ResponseEntity.ok(solicitacaoRepository.findByAluno(aluno).stream()
                 .map(DadosListagemSolicitacaoAluno::new)
-                .toList();
-
-        return ResponseEntity.ok(dadosSolicitacoes);
+                .toList());
     }
 
-    @GetMapping("/listarSolicitacoes")
+    @GetMapping("/listarSolicitacoses")
     public ResponseEntity<List<SolicitarEstagio>> listarSolicitacoes() {
-        var solicitacoes = solicitacaoRepository.findAll();
-        if (solicitacoes.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.ok(solicitacoes);
-        }
+        List<SolicitarEstagio> solicitacoes = solicitacaoRepository.findAll();
+        return solicitacoes.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(solicitacoes);
     }
-
-/*    @GetMapping("/listarSolicitacoesPorServidor/{servidorId}")
-    public ResponseEntity<List<SolicitarEstagio>> listarSolicitacoesPorServidor(@PathVariable("servidorId") Long servidorId) {
-        var servidor = servidorRepository.findById(servidorId);
-        if (servidor.isPresent()) {
-            var solicitacoesPorServidor = solicitacaoRepository.findByServidor(servidor.get());
-            if (solicitacoesPorServidor.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            } else {
-                return ResponseEntity.ok(solicitacoesPorServidor);
-            }
-        }
-            return ResponseEntity.notFound().build();
-
-    }*/
-
-  @GetMapping("/dadosSolicitacaoTeste")
-public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
-    List<SolicitarEstagio> solicitacoes = solicitacaoRepository.findAll();
-    if (solicitacoes.isEmpty()) {
-        return ResponseEntity.notFound().build(); // Se não encontrar, retorna 404 Not Found
-    } else {
-        return ResponseEntity.ok(solicitacoes); // Se encontrar, retorna 200 OK com a lista de entidades
-    }
-}
-
 
     @GetMapping("/listarSolicitacoesPorEmailServidor")
     public ResponseEntity<List<DadosListagemSolicitacaoServidor>> listarSolicitacoesPorEmailServidor(@RequestHeader("Authorization") String token) {
@@ -178,7 +113,6 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
             System.out.println(servidor.getRole() + " " + servidor.getCargo());
             solicitacoes = solicitacaoRepository.findAll();
         }
-
         List<DadosListagemSolicitacaoServidor> dadosSolicitacoes = solicitacoes.stream().map(DadosListagemSolicitacaoServidor::new).toList();
         
         return ResponseEntity.ok(dadosSolicitacoes);
@@ -236,11 +170,7 @@ public ResponseEntity<List<SolicitarEstagio>> dadoSolicitacaoTeste() {
     @GetMapping("/documentosSolicitacao/{id}")
     public ResponseEntity<List<Documento>> getDocumentosSolicitacao(@PathVariable("id") Long id) {
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
-        if (solicitacao.isPresent()) {
-            return ResponseEntity.ok(solicitacao.get().getDocumento());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return solicitacao.map(solicitarEstagio -> ResponseEntity.ok(solicitarEstagio.getDocumento())).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/deferirSolicitacao/{id}")

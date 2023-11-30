@@ -11,13 +11,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class BaseController {
     @Autowired
-    AlunoRepository alunoRepository;
+    public AlunoRepository alunoRepository;
 
     @Autowired
     public SolicitacaoRepository solicitacaoRepository;
 
     @Autowired
     public UsuarioRepository usuarioRepository;
+
+
+
+
 
     @Autowired
     protected

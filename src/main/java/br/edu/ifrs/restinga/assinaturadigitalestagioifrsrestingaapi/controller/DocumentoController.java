@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import javax.sql.rowset.serial.SerialBlob;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Blob;
@@ -79,6 +80,25 @@ public class DocumentoController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+
+    @GetMapping("/downloadDocumentosAssinados")
+    public ResponseEntity<byte[]> downloadArquivosAssinados(@RequestParam long chamadoId) throws SQLException {
+        List<Documento> docs = documentoRepository.findBySolicitarEstagioIdAndAssinadoTrue(chamadoId);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for (Documento doc : docs) {
+            byte[] documentoBytes = doc.getDocumento().getBytes(1, (int) doc.getDocumento().length());
+            try {
+                baos.write(documentoBytes);
+            } catch (IOException e) {
+                // Lidar com a exceção, se necessário
+            }
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(baos.toByteArray());
+    }
+
     @DeleteMapping("/deletarDocumento")
     public ResponseEntity<String> deletarDocumento(@RequestParam Long chamadoId){
         Optional<Documento> doc = documentoRepository.findById(chamadoId);
@@ -104,7 +124,26 @@ public class DocumentoController {
             documentoDto.setNome(documento.getNome());
             documentosDto.add(documentoDto);
         }
+        if (!documentosDto.isEmpty()) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(documentosDto);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
+    @GetMapping("/listarDocumentoAssinados/{solicitarEstagioId}")
+    @ResponseBody
+    public ResponseEntity<List<DocumentoDto>> listarDocumentosAssinados(@PathVariable("solicitarEstagioId") Long solicitarEstagioId) {
+        List<Documento> documentos = documentoRepository.findBySolicitarEstagioIdAndAssinadoTrue(solicitarEstagioId);
+        List<DocumentoDto> documentosDto = new ArrayList<>();
+        for (Documento documento : documentos) {
+            DocumentoDto documentoDto = new DocumentoDto();
+            documentoDto.setId(documento.getId());
+            documentoDto.setNome(documento.getNome());
+            documentosDto.add(documentoDto);
+        }
         if (!documentosDto.isEmpty()) {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)

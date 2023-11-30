@@ -58,7 +58,7 @@ public class SolicitarEstagio {
 
     private String resposta;
 
-    public SolicitarEstagio(Aluno aluno, Curso curso, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, boolean editavel, String resposta, String statusEtapaCoordenador, String statusSetorEstagio, String statusEtapaDiretor) {
+    public SolicitarEstagio(Aluno aluno, Curso curso, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, boolean editavel) {
         this.aluno = aluno;
         this.curso = curso;
         this.tipo = tipo;
@@ -70,8 +70,10 @@ public class SolicitarEstagio {
         this.observacao = observacao;
         this.resposta = resposta;
         this.editavel = editavel;
-        this.statusEtapaCoordenador = statusEtapaCoordenador;
-        this.statusSetorEstagio = statusSetorEstagio;
-        this.statusEtapaDiretor = statusEtapaDiretor;
+        this.resposta = "";
+        this.statusEtapaCoordenador = "";
+        this.statusSetorEstagio = "";
+        this.statusEtapaDiretor = "";
     }
+
 }
