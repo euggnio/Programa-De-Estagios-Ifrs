@@ -55,6 +55,12 @@ public class ServidorController extends BaseController {
         return ResponseEntity.ok(servidor);
     }
 
+    @PostMapping("/buscarOrientadorCurso")
+        public ResponseEntity buscarOrientadorCurso(@RequestBody Long cursoId){
+        var servidor = servidorRepository.findServidorByCurso_Id(cursoId);
+        return ResponseEntity.ok(servidor);
+    }
+
     @GetMapping("/excluirServidor/{id}")
     @Transactional
     public ResponseEntity excluirServidor(@PathVariable Long id) {

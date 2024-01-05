@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +48,21 @@ public class SolicitarEstagio {
     @Column(columnDefinition = "DATETIME")
     private LocalDateTime dataSolicitacao;
 
+    @Column(columnDefinition = "DATETIME")
+    private LocalDate finalDataEstagio;
+
+    @Column(columnDefinition = "DATETIME")
+    private LocalDate inicioDataEstagio;
+
     private String titulo;
+
+    private String nomeEmpresa;
+
+    private Boolean ePrivada;
+
+    private String contatoEmpresa;
+
+    private String agente;
 
     private String conteudo;
 
@@ -58,7 +74,9 @@ public class SolicitarEstagio {
 
     private String resposta;
 
-    public SolicitarEstagio(Aluno aluno, Curso curso, String tipo, String titulo, String conteudo, String observacao, String status, String etapa, boolean editavel) {
+    public SolicitarEstagio(LocalDate finalDataEstagio,LocalDate inicioDataEstagio, Aluno aluno, Curso curso, String tipo, String titulo, String nomeEmpresa,Boolean ePrivada,String contatoEmpresa, String agente, String conteudo, String observacao, String status, String etapa, boolean editavel) {
+        this.finalDataEstagio = finalDataEstagio;
+        this.inicioDataEstagio = inicioDataEstagio;
         this.aluno = aluno;
         this.curso = curso;
         this.tipo = tipo;
@@ -68,6 +86,10 @@ public class SolicitarEstagio {
         this.etapa = etapa;
         this.titulo = aluno.getNomeCompleto();
         this.observacao = observacao;
+        this.nomeEmpresa = nomeEmpresa;
+        this.ePrivada = ePrivada;
+        this.contatoEmpresa = contatoEmpresa;
+        this.agente = agente;
         this.resposta = resposta;
         this.editavel = editavel;
         this.resposta = "";

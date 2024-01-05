@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.File;
 import java.sql.Blob;
 
 @Entity(name = "documento")
@@ -23,6 +24,10 @@ public class Documento {
     private String nome;
     @Column
     private boolean assinado;
+    @Column
+    private boolean paraDiretor;
     @Lob
     private Blob documento;
+
+
 }

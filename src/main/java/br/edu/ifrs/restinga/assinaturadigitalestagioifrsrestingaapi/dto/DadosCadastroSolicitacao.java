@@ -1,10 +1,7 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
-
+import java.time.LocalDate;
 public record DadosCadastroSolicitacao(
         @NotBlank
         String tipo,
@@ -14,12 +11,19 @@ public record DadosCadastroSolicitacao(
         long cursoId,
         @NotBlank
         String titulo,
-        
+        String nomeEmpresa,
+        Boolean ePrivada,
+
+        String contatoEmpresa,
+        String agente,
         @Nullable
         String conteudo,
         @Nullable
         String observacao,
-
+        @NotBlank
+        LocalDate finalDataEstagio,
+        @NotBlank
+        LocalDate inicioDataEstagio,
         @Nullable
         String status,
         @Nullable

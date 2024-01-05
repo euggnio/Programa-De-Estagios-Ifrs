@@ -17,9 +17,9 @@ public interface SolicitacaoRepository  extends JpaRepository<SolicitarEstagio,L
 
     int countByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status);
 
-    List<SolicitarEstagio> findAllByEtapaIsGreaterThanEqual(String etapa);
-    List<SolicitarEstagio> findByCursoAndEtapaIsGreaterThanEqual(Curso curso, String etapa);
-
+    List<SolicitarEstagio> findAllByEtapaIsGreaterThanEqualAndStatusNotContaining(String etapa, String deferido);
+    List<SolicitarEstagio> findByCursoAndEtapaIsGreaterThanEqualAndStatusNotContainingIgnoreCase(Curso curso, String etapa, String deferido);
+    List<SolicitarEstagio> findByCursoAndEtapaEqualsAndStatusNotContainingIgnoreCase(Curso curso, String etapa, String deferido);
     @Transactional
     @Modifying
     @Query( value = " UPDATE solicitar_estagio s SET s.editavel = CASE WHEN s.editavel = false THEN true ELSE s.editavel = false END WHERE s.id = :solicitacaoId", nativeQuery = true)

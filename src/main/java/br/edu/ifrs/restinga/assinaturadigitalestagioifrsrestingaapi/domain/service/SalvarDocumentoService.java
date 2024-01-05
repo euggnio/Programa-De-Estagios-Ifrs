@@ -1,102 +1,112 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service;
 
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller.BaseController;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleUtil;
-import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Documento;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.http.FileContent;
-import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
-
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.GeneralSecurityException;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
-import static br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleUtil.*;
+@Service
+@Getter
+public class SalvarDocumentoService extends BaseController {
 
+    private String pastaAluno;
+    private final String pastaSistemaEstagios = "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah";
 
-public class SalvarDocumentoService {
-
-
-
-
-    public void salvarDocumentoDeSolicitacao(String idChamado, String nomeDocumento) throws IOException, GeneralSecurityException {
+    public void salvarDocumentoDeSolicitacao(String idChamado, List<Documento> documentos) throws IOException, GeneralSecurityException {
         Drive service = GoogleUtil.createDriveService();
-        FileList result = service.files().list()
-                .setPageSize(10)
-                .setFields("nextPageToken, files(id, name)")
-                .execute();
-        List<File> files = result.getFiles();
-        if (files == null || files.isEmpty()) {
-            System.out.println("No files found.");
-        } else {
-            System.out.println("Files:");
-            for (File file : files) {
-                System.out.printf("%s (%s)\n", file.getName(), file.getId());
+        //Linhas comentadas servem para imprimir todos itens do drive, serve como debug.
+        //FileList result = service.files().list()
+        //         .setPageSize(10)
+        //         .setFields("nextPageToken, files(id, name)")
+        //         .execute();
+        // List<File> files = result.getFiles();
+        // if (files == null || files.isEmpty()) {
+        //     System.out.println("No files found.");
+        // } else {
+        //     System.out.println("Files:");
+        //     for (File file : files) {
+        //         System.out.printf("%s (%s)\n", file.getName(), file.getId());
+        //     }
+        //}
+
+        if (verificarExistenciaArquivo(service, idChamado)) {
+            pastaAluno = criarPastaGoogleDrive(service, idChamado);
+        }
+
+        for (int i = 0; i <documentos.size(); i++) {
+
+            File fileMetadata = new File();
+            fileMetadata.setName(documentos.get(i).getNome());
+            fileMetadata.setParents(Collections.singletonList(pastaAluno));
+
+            byte[] bytes;
+            try (InputStream inputStream = documentos.get(i).getDocumento().getBinaryStream()) {
+                bytes = inputStream.readAllBytes();
+            } catch (SQLException e) {
+                System.err.println("::ERRO ao converter BLOB: " + e.getMessage());
+                throw new RuntimeException(e);
             }
-        }
+            InputStreamContent mediaContent = new InputStreamContent("application/octet-stream", new ByteArrayInputStream(bytes));
 
-        if(verificarExistenciaArquivo(service,idChamado,result)){
-            criarPastaGoogleDrive(service,idChamado);
-        }
+            try {
+                File file = service.files().create(fileMetadata, mediaContent)
+                        .setFields("id")
+                        .execute();
+            } catch (GoogleJsonResponseException e) {
+                System.err.println("::ERRO ao fazer uploada do arquivo para google drive: " + e.getDetails());
+                throw e;
+            }
 
-        File fileMetadata = new File();
-        fileMetadata.setName(nomeDocumento);
-        fileMetadata.setParents(Collections.singletonList("15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah"));
-        // File's content.
-        java.io.File filePath = new java.io.File("C:\\Users\\eugen\\Videos\\Captures\\2.png");
-        // Specify media type and file-path for file.
-        FileContent mediaContent = new FileContent("image/jpeg", filePath);
-        try {
-            File file = service.files().create(fileMetadata, mediaContent)
-                    .setFields("id")
-                    .execute();
-            System.out.println("File ID: " + file.getId());
-        } catch (GoogleJsonResponseException e) {
-            // TODO(developer) - handle error appropriately
-            System.err.println("Unable to upload file: " + e.getDetails());
-            throw e;
         }
     }
 
-    public void criarPastaGoogleDrive(Drive service, String nomePasta) {
+    public String criarPastaGoogleDrive(Drive service, String matriculaAluno) {
         File fileMetadata = new File();
-        fileMetadata.setName(nomePasta);
+        fileMetadata.setName(matriculaAluno);
         fileMetadata.setMimeType("application/vnd.google-apps.folder");
-        fileMetadata.setParents(Collections.singletonList("15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah"));
+        fileMetadata.setParents(Collections.singletonList(pastaSistemaEstagios));
         try {
             File file = service.files().create(fileMetadata)
                     .setFields("id")
                     .execute();
-            System.out.println("Folder ID CREATED: " + file.getId());
-
-        } catch (IOException e ) {
-            System.out.println("erro" + e.getMessage());
+            System.out.println("::PASTA no google drive criada para aluno de matricula: " + matriculaAluno);
+            return file.getId();
+        } catch (IOException e) {
+            System.out.println("::ERRO ao criar pasta no google drive: " + e.getMessage());
         }
+        return "";
     }
-    public boolean verificarExistenciaArquivo(Drive service, String nome, FileList result) throws IOException {
+
+    public boolean verificarExistenciaArquivo(Drive service, String nome) throws IOException {
         String pageToken = null;
         do {
-            FileList result2 = service.files().list()
+            FileList result = service.files().list()
                     .setQ("'" + "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah" + "' in parents and mimeType='application/vnd.google-apps.folder'")
                     .setFields("nextPageToken, files(id, name)")
                     .setPageToken(pageToken)
                     .execute();
             for (File file : result.getFiles()) {
-                if(file.getName().equals(nome)){
-                    System.out.println("ID ENCONTRADO ESSA PASTA JÁ EXISTE!!!!");
+                if (file.getName().equals(nome)) {
+                    pastaAluno = file.getId();
+
                     return false;
                 }
             }
-            pageToken = result2.getNextPageToken();
+            pageToken = result.getNextPageToken();
         } while (pageToken != null);
         return true;
     }
-
-
 }

@@ -1,6 +1,5 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.ServidorImplementacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.*;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.security.TokenService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.EmailValidator;
@@ -19,7 +18,8 @@ public class BaseController {
     @Autowired
     public UsuarioRepository usuarioRepository;
 
-
+    @Autowired
+    public EstagiariosRepository estagiariosRepository;
 
 
 
@@ -42,6 +42,8 @@ public class BaseController {
 
     @Autowired
     public ServidorRepository servidorRepository;
+
+
 
     @Autowired
     public RoleRepository roleRepository;

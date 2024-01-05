@@ -15,6 +15,14 @@ FROM (
   SELECT '15', 'Setor Estágio'
   UNION ALL
   SELECT '16', 'Diretor'
+  UNION ALL
+  SELECT '17', 'Lazer'
+  UNION ALL
+  SELECT '18', 'Informática'
+  UNION ALL
+  SELECT '19', 'Eletrônica'
+  UNION ALL
+  SELECT '20', 'Guia de Turismo'
 ) AS dados
 WHERE NOT EXISTS (
   SELECT 1

@@ -3,6 +3,7 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.DocumentoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.SolicitacaoRepository;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SalvarDocumentoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DocumentoDto;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Documento;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
@@ -32,6 +33,7 @@ public class DocumentoController {
     DocumentoRepository documentoRepository;
     @Autowired
     SolicitacaoRepository solicitacaoRepository;
+
     @PostMapping("/salvarDocumento")
     @ResponseBody
     @Transactional
@@ -40,9 +42,10 @@ public class DocumentoController {
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         if (solicitacao.get().isEditavel()) {
             try {
-                if(documentoRepository.countBySolicitarEstagioId(id) > 8){
+                if(documentoRepository.countBySolicitarEstagioId(id) > 32){
                     return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).body("Limite de dados atingido!!");
                 }
+
             for (MultipartFile documento : documentos) {
                 Documento doc = new Documento();
                 byte[] bytesDocumento = documento.getBytes();
@@ -55,11 +58,10 @@ public class DocumentoController {
             }
                 } catch (IOException | SQLException e) {
                     return ResponseEntity.badRequest().body("Algum erro ocorreu!");
-                }
+            }
         }
         return ResponseEntity.badRequest().body("Impossivel adicionar documentos!");
     }
-
 
     @GetMapping("/downloadDocumento")
     public ResponseEntity<Resource> downloadArquivo(@RequestParam long chamadoId) {
@@ -90,8 +92,8 @@ public class DocumentoController {
             byte[] documentoBytes = doc.getDocumento().getBytes(1, (int) doc.getDocumento().length());
             try {
                 baos.write(documentoBytes);
-            } catch (IOException e) {
-                // Lidar com a exceção, se necessário
+            } catch (IOException ignored) {
+
             }
         }
         return ResponseEntity.ok()
@@ -153,6 +155,21 @@ public class DocumentoController {
         }
     }
 
+    @GetMapping("/direcionarDocumentoDiretor/{documentoId}")
+    @ResponseBody
+    public ResponseEntity<String> direcionarDocDiretor(@PathVariable("documentoId") Long documentoId){
+        Optional<Documento> documento = documentoRepository.findById(documentoId);
+        if(documento.isPresent()){
+            documento.get().setParaDiretor(!documento.get().isParaDiretor());
+            documentoRepository.save(documento.get());
+            return ResponseEntity.ok().build();
+        }
+        else{
+            return ResponseEntity.notFound().build();
+        }
+
+    }
+
     @GetMapping("/listarDocumento/{solicitarEstagioId}")
     @ResponseBody
     public ResponseEntity<List<DocumentoDto>> listarDocumentosPorSolicitarEstagioId(@PathVariable("solicitarEstagioId") Long solicitarEstagioId) {
@@ -161,7 +178,9 @@ public class DocumentoController {
 
         for (Documento documento : documentos) {
             DocumentoDto documentoDto = new DocumentoDto();
+            documentoDto.setAssinado(documento.isAssinado());
             documentoDto.setId(documento.getId());
+            documentoDto.setParaDiretor(documento.isParaDiretor());
             documentoDto.setNome(documento.getNome());
             documentosDto.add(documentoDto);
         }

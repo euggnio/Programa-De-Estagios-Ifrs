@@ -23,7 +23,11 @@ public class FileImp extends BaseController{
                 Documento documento = new Documento();
                 byte[] bytesDocumento = doc.getBytes();
                 Blob blobDoc = new SerialBlob(bytesDocumento);
-                documento.setNome(doc.getOriginalFilename());
+                if(assinado){
+                    documento.setNome(doc.getOriginalFilename() + "ASSINADO");
+                }else {
+                    documento.setNome(doc.getOriginalFilename());
+                }
                 documento.setDocumento(blobDoc);
                 documento.setAssinado(assinado);
                 documento.setSolicitarEstagio(solicitacaoId);

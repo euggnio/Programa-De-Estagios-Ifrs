@@ -17,6 +17,7 @@ import com.google.api.services.drive.DriveScopes;
 
 import java.io.*;
 import java.security.GeneralSecurityException;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
@@ -90,9 +91,9 @@ public class GoogleUtil {
                 .build();
     }
 
-    public static void main(String... args) throws IOException, GeneralSecurityException {
+    public static void main(String... args) throws IOException, GeneralSecurityException, SQLException {
         SalvarDocumentoService salvarDocumentoService = new SalvarDocumentoService();
-        salvarDocumentoService.salvarDocumentoDeSolicitacao("BABABA2344","teste");
+
 
     }
 

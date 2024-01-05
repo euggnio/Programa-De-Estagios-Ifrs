@@ -16,6 +16,7 @@ public interface ServidorRepository extends JpaRepository<Servidor,Long> {
 
     Optional<Servidor> findServidorByUsuarioSistema(Usuario usuario);
 
+
     void deleteServidorByUsuarioSistema(Usuario usuario);
 
 }

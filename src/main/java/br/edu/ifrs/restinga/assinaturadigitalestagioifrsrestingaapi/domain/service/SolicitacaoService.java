@@ -33,6 +33,7 @@ public class SolicitacaoService extends BaseController {
     public ResponseEntity cadastrarSolicitacao(DadosCadastroSolicitacao dados, List<MultipartFile> arquivos) {
         Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
         Optional<Curso> curso = cursoRepository.findById(dados.cursoId());
+        System.out.println("teste:::::::: " + dados.inicioDataEstagio());
 
         if (aluno.isEmpty() || curso.isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -46,7 +47,21 @@ public class SolicitacaoService extends BaseController {
     }
 
     private SolicitarEstagio criarSolicitacao(DadosCadastroSolicitacao dados, Curso curso, Aluno aluno) {
-        return new SolicitarEstagio(aluno, curso, dados.tipo(), dados.titulo(), dados.conteudo(), dados.observacao(), "Nova", "1", true);
+        return new SolicitarEstagio(dados.finalDataEstagio(),
+                dados.inicioDataEstagio(),
+                aluno,
+                curso,
+                dados.tipo(),
+                dados.titulo(),
+                dados.nomeEmpresa(),
+                dados.ePrivada(),
+                dados.contatoEmpresa(),
+                dados.agente(),
+                dados.conteudo(),
+                dados.observacao(),
+                "Nova",
+                "1",
+                true);
     }
 
     private void saveSolicitacao(SolicitarEstagio solicitacao) {
