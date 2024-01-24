@@ -23,6 +23,7 @@ public class BaseController {
 
 
 
+
     @Autowired
     protected
     PasswordEncoder passwordEncoder;

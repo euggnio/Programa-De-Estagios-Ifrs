@@ -10,9 +10,12 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosLis
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoServidor;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import jakarta.transaction.Transactional;
+import org.apache.http.protocol.HTTP;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,16 +37,14 @@ public class SolicitacaoController extends BaseController {
     private SolicitacaoService solicitacaoService;
     @Autowired
     private SalvarDocumentoService salvarDocumentoService;
+
     //Em teste para evitar deadlock diretor.
     private final Object lock = new Object();
 
     @PostMapping(value = "/cadastrarSolicitacao")
     public ResponseEntity cadastrarSolicitacao(@RequestPart("dados") DadosCadastroSolicitacao dados,
                                                @RequestParam("file") List<MultipartFile> arquivos) {
-        if (solicitacaoService.verificarSolicitacaoExistente(dados.alunoId(), dados.tipo())) {
-            return ResponseEntity.badRequest().body("Você já possui uma solicitação deste tipo em andamento!");
-        }
-        return solicitacaoService.cadastrarSolicitacao(dados, arquivos);
+            return solicitacaoService.cadastrarSolicitacao(dados, arquivos);
     }
 
     @GetMapping("/listarDocumentos")
@@ -53,12 +54,14 @@ public class SolicitacaoController extends BaseController {
         return solicitacao.get().getDocumento().get(1).getNome();
     }
 
+
     @GetMapping("/editarSolicitacao")
     public ResponseEntity setEditavel(@RequestParam long id, @RequestHeader("Authorization") String token) {
-        String email = tokenService.getSubject(token.replace("Bearer ", ""));
-        System.out.println("EMAIL: " + email);
+        if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
         solicitacaoRepository.atualizarEditavelParaTrue(id);
         return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     @GetMapping("/editarobservacaoSolicitacao")
@@ -69,6 +72,24 @@ public class SolicitacaoController extends BaseController {
         }
         return ResponseEntity.badRequest().build();
     }
+
+    @PostMapping("/editarEmpresaSolicitacao")
+    public ResponseEntity editarEmpresa(@RequestParam long id, @RequestBody DadosAtualizacaoSolicitacao empresa, @RequestHeader("Authorization") String token){
+        if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+            Optional<SolicitarEstagio> solicitarEstagio = solicitacaoRepository.findById(id);
+            if(solicitarEstagio.isPresent()){
+                solicitarEstagio.get().setNomeEmpresa(empresa.nomeEmpresa());
+                solicitarEstagio.get().setAgente(empresa.agente());
+                solicitarEstagio.get().setContatoEmpresa(empresa.contatoEmpresa());
+                solicitarEstagio.get().setEPrivada(empresa.ePrivada());
+                solicitacaoRepository.save(solicitarEstagio.get());
+                return ResponseEntity.ok().build();
+            }
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
 
     @GetMapping("/editarstatus")
     public ResponseEntity setSolicitacao(@RequestParam long id, @RequestParam String status, @RequestHeader("Authorization") String token) {
@@ -81,7 +102,13 @@ public class SolicitacaoController extends BaseController {
     @GetMapping("/editarEtapa")
     public ResponseEntity setEtapa(@RequestParam long id, @RequestParam String etapa, @RequestHeader("Authorization") String token) {
         if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
-            solicitacaoRepository.atualizarEtapa(id, etapa);
+            System.out.println(etapa);
+            if(etapa.equalsIgnoreCase("5")){
+                solicitacaoRepository.atualizarEtapa(id, etapa , "Deferido");
+            }
+            else {
+                solicitacaoRepository.atualizarEtapa(id, etapa, "Em andamento");
+            }
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.badRequest().build();
@@ -107,8 +134,10 @@ public class SolicitacaoController extends BaseController {
     public ResponseEntity<List<DadosListagemSolicitacaoServidor>> listarSolicitacoesPorEmailServidor(@RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
-
         List<SolicitarEstagio> solicitacoes = null;
+        if(servidor == null){
+            return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         if (servidor.getCargo().equals("Coordenador")) {
             Optional<Curso> curso = cursoRepository.findById(servidor.getCurso().getId());
             solicitacoes = solicitacaoRepository.findByCursoAndEtapaEqualsAndStatusNotContainingIgnoreCase(curso.get(), "3", "Deferido");
@@ -124,17 +153,20 @@ public class SolicitacaoController extends BaseController {
     }
 
     @GetMapping("/alunoSolicitacao/{id}")
-    public ResponseEntity<DadosListagemSolicitacaoAluno> getAlunoSolicitacao(@PathVariable("id") Long id) {
+    public ResponseEntity<DadosListagemSolicitacaoAluno> getAlunoSolicitacao(@PathVariable("id") Long id , @RequestHeader("Authorization") String token) {
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
+        if(servidor == null){
+            return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         if (solicitacao.isPresent()) {
             DadosListagemSolicitacaoAluno dadosSolicitacao = new DadosListagemSolicitacaoAluno(solicitacao.get());
             if (solicitacao.get().getStatus().equals("Nova")) {
-                SolicitarEstagio sl;
-                sl = solicitacao.get();
-                sl.setStatus("Em andamento");
-                sl.setEtapa("2");
-                sl.setEditavel(false);
-                solicitacaoRepository.save(sl);
+                solicitacao.get().setStatus("Em andamento");
+                solicitacao.get().setEtapa("2");
+                solicitacao.get().setEditavel(false);
+                solicitacaoRepository.save(solicitacao.get());
             }
             return ResponseEntity.ok(dadosSolicitacao);
         } else {
@@ -142,12 +174,16 @@ public class SolicitacaoController extends BaseController {
         }
     }
 
+
     @GetMapping("/trocarValidadeContrato")
-    public ResponseEntity trocarDataContrato(@RequestParam Long id, @RequestParam String dataNova) {
+
+    public ResponseEntity trocarDataContrato(@RequestParam Long id, @RequestParam String dataFinalNova, @RequestParam String dataInicioNova) {
+        System.out.println(dataInicioNova + " :: " + dataFinalNova);
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         if (solicitacao.isPresent()) {
-            solicitacao.get().setFinalDataEstagio(LocalDate.parse(dataNova, formatter));
+            solicitacao.get().setFinalDataEstagio(LocalDate.parse(dataFinalNova, formatter));
+            solicitacao.get().setInicioDataEstagio(LocalDate.parse(dataInicioNova, formatter));
             solicitacaoRepository.save(solicitacao.get());
             return ResponseEntity.ok().build();
         } else {

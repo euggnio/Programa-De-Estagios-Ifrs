@@ -6,8 +6,6 @@ public record DadosAutenticacaoGoogle (
         @NotBlank
         String email,
         @NotBlank
-        String email_verified,
-        @NotBlank
         String family_name,
         @NotBlank
         String given_name,
@@ -16,5 +14,6 @@ public record DadosAutenticacaoGoogle (
         @NotBlank
         String sub
 ){
+
 
 }

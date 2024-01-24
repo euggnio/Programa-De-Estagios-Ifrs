@@ -33,10 +33,11 @@ public class SolicitacaoService extends BaseController {
     public ResponseEntity cadastrarSolicitacao(DadosCadastroSolicitacao dados, List<MultipartFile> arquivos) {
         Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
         Optional<Curso> curso = cursoRepository.findById(dados.cursoId());
-        System.out.println("teste:::::::: " + dados.inicioDataEstagio());
-
         if (aluno.isEmpty() || curso.isEmpty()) {
             return ResponseEntity.badRequest().build();
+        }
+        if (verificarSolicitacaoExistente(dados.alunoId(), dados.tipo())) {
+            return ResponseEntity.badRequest().body("Você já possui uma solicitação deste tipo em andamento!");
         }
 
         SolicitarEstagio solicitacao = criarSolicitacao(dados, curso.get(), aluno.get());
@@ -71,7 +72,7 @@ public class SolicitacaoService extends BaseController {
 
     public boolean verificarSolicitacaoExistente(long alunoId, String tipoSolicitacao) {
         int quantidade = solicitacaoRepository.countByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(alunoId, tipoSolicitacao, "Indeferido");
-        return (quantidade >= 5) ? true : false;
+        return (quantidade >= 2) ? true : false;
     }
 
 

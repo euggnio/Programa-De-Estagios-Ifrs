@@ -35,18 +35,19 @@ public class ServidorController extends BaseController {
 
     @PostMapping("/cadastrarServidor")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity salvar(@RequestBody @Valid DadosCadastroServidor dadosCadastroServidor, UriComponentsBuilder uriBuilder) {
-        Optional<Curso> curso = cursoRepository.findById(dadosCadastroServidor.curso().getId());
-        System.out.println("PASSOY");
-
-        if (curso.isEmpty()) {
-            return servidorImplementacao.salvar(dadosCadastroServidor, null, uriBuilder);
+    public ResponseEntity salvar(@RequestBody @Valid DadosCadastroServidor dadosCadastroServidor, UriComponentsBuilder uriBuilder, @RequestHeader("Authorization") String token) {
+        Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(tokenService.getSubject(token.replace("Bearer ", "")));
+        if(servidor != null) {
+            Optional<Curso> curso = cursoRepository.findById(dadosCadastroServidor.curso().getId());
+            if (curso.isEmpty()) {
+                return servidorImplementacao.salvar(dadosCadastroServidor, null, uriBuilder);
+            }
+            if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && dadosCadastroServidor.curso().getId() != 15) {
+                return TratadorDeErros.tratarErro409("curso");
+            }
+            return servidorImplementacao.salvar(dadosCadastroServidor, curso.get(), uriBuilder);
         }
-        if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && dadosCadastroServidor.curso().getId() != 15) {
-            return TratadorDeErros.tratarErro409("curso");
-        }
-        return servidorImplementacao.salvar(dadosCadastroServidor, curso.get(), uriBuilder);
-
+        return ResponseEntity.badRequest().build();
     }
 
     @GetMapping("/buscarServidor/{id}")

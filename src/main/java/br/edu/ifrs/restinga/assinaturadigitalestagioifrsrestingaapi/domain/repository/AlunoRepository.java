@@ -7,4 +7,6 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
 
 public interface AlunoRepository extends JpaRepository<Aluno, Long> {
     Aluno findByUsuarioSistemaEmail(String email);
+
+    Boolean existsById(long id);
 }

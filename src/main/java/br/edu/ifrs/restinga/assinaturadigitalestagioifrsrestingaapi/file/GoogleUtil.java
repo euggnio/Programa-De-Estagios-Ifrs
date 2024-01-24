@@ -1,23 +1,29 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SalvarDocumentoService;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAutenticacaoGoogle;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
 
+import javax.mail.MessagingException;
 import java.io.*;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,7 +48,7 @@ public class GoogleUtil {
      */
     private static final List<String> SCOPES =
             Collections.singletonList(DriveScopes.DRIVE);
-    private static final String CREDENTIALS_FILE_PATH = "C:\\Users\\eugen\\Documents\\ProgramaDeEstagioIf\\keys\\credentialsAppDrive.json";
+    static final String CREDENTIALS_FILE_PATH = "C:\\Users\\eugen\\Documents\\ProgramaDeEstagioIf\\keys\\credentialsAppDrive.json";
 
     public static JsonFactory getJsonFactory(){
         return JSON_FACTORY;
@@ -82,6 +88,31 @@ public class GoogleUtil {
         return credential;
     }
 
+    public static DadosAutenticacaoGoogle verificarToken(String token){
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new JacksonFactory())
+                .setAudience(Arrays.asList("608337993679-jbh57642rjhkuuaefg5lik3vol1tk4jc.apps.googleusercontent.com"))
+                .build();
+        try {
+            System.out.println("DADA " + token);
+            GoogleIdToken idToken = verifier.verify(token);
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                if(payload.getEmailVerified()) {
+                    DadosAutenticacaoGoogle dados = new DadosAutenticacaoGoogle(
+                             payload.getEmail()
+                            ,payload.get("family_name").toString()
+                            ,payload.get("given_name").toString()
+                            ,payload.get("name").toString()
+                            ,payload.get("sub").toString());
+                    return dados;
+                }
+            }
+        } catch (GeneralSecurityException | IOException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
     public static Drive createDriveService() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
         //Essa linha inicia o serviço do drive, com o transporte definido na linha acima, a  interface do JSON e as credenciais.
@@ -91,9 +122,8 @@ public class GoogleUtil {
                 .build();
     }
 
-    public static void main(String... args) throws IOException, GeneralSecurityException, SQLException {
-        SalvarDocumentoService salvarDocumentoService = new SalvarDocumentoService();
-
+    public static void main(String... args) throws IOException, GeneralSecurityException, SQLException, MessagingException {
+        verificarToken("eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ4YTYzYmM0NzY3Zjg1NTBhNTMyZGM2MzBjZjdlYjQ5ZmYzOTdlN2MiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI2MDgzMzc5OTM2NzktamJoNTc2NDJyamhrdXVhZWZnNWxpazN2b2wxdGs0amMuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI2MDgzMzc5OTM2NzktamJoNTc2NDJyamhrdXVhZWZnNWxpazN2b2wxdGs0amMuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTcwMTkwMDc2Njk3ODMzODAwMzEiLCJoZCI6InJlc3RpbmdhLmlmcnMuZWR1LmJyIiwiZW1haWwiOiIyMDIwMDA2MjkzQHJlc3RpbmdhLmlmcnMuZWR1LmJyIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTcwNjEzMzg0NywibmFtZSI6IkVVR8OKTklPIENBUlRBR0VOQSBST0RSSUdVRVMiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS3VTTXVNd3FoOWtMbHA2UjFjd0c0TUZSN0Vzd2VHZXhHdFhoWkdaSllPPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IkVVR8OKTklPIENBUlRBR0VOQSIsImZhbWlseV9uYW1lIjoiUk9EUklHVUVTIiwibG9jYWxlIjoicHQtQlIiLCJpYXQiOjE3MDYxMzQxNDcsImV4cCI6MTcwNjEzNzc0NywianRpIjoiOWI2ODYzMmYwOTVlYzNlZThjOWQ0MDBhOGMxYmJmN2MxZDQzMDhhOSJ9.ho_SbM-c4LUvCTobxKdv_M1UM8GVrAWLYPiacKn4aDjdj6BivkmN9CpYQ_Ypei8Q3cBFa1H3lCD1YbF9oeWowFmin4poG5L8SCFNDrzyx4dv4VWxCu_GM6XhknfDc_iBBzrwD3qSZhhqxHnxr68ZkyBE6diqjirROHcvT-cQOX0ika7k4Iuy5C54Jkn1YpZj_bafrcfMJRo7U5KUP36vNhzICZkPyyjSHxOgF97NNrZwGtjhfNqznytBFPukak7dGX4TyG6BmF5GH1a74SpPjBlXPfMvTsZ2RggJNT4eB-4RssO6974MFWF07YuR8QimAlR6uL9Evb-ESRFEG3dmrQ");
 
     }
 

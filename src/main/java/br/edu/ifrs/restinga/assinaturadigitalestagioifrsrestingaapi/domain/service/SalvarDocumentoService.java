@@ -41,26 +41,21 @@ public class SalvarDocumentoService extends BaseController {
         //         System.out.printf("%s (%s)\n", file.getName(), file.getId());
         //     }
         //}
-
         if (verificarExistenciaArquivo(service, idChamado)) {
             pastaAluno = criarPastaGoogleDrive(service, idChamado);
         }
-
-        for (int i = 0; i <documentos.size(); i++) {
-
+        for (Documento documento : documentos) {
             File fileMetadata = new File();
-            fileMetadata.setName(documentos.get(i).getNome());
+            fileMetadata.setName(documento.getNome());
             fileMetadata.setParents(Collections.singletonList(pastaAluno));
-
             byte[] bytes;
-            try (InputStream inputStream = documentos.get(i).getDocumento().getBinaryStream()) {
+            try (InputStream inputStream = documento.getDocumento().getBinaryStream()) {
                 bytes = inputStream.readAllBytes();
             } catch (SQLException e) {
                 System.err.println("::ERRO ao converter BLOB: " + e.getMessage());
                 throw new RuntimeException(e);
             }
             InputStreamContent mediaContent = new InputStreamContent("application/octet-stream", new ByteArrayInputStream(bytes));
-
             try {
                 File file = service.files().create(fileMetadata, mediaContent)
                         .setFields("id")
@@ -69,10 +64,8 @@ public class SalvarDocumentoService extends BaseController {
                 System.err.println("::ERRO ao fazer uploada do arquivo para google drive: " + e.getDetails());
                 throw e;
             }
-
         }
     }
-
     public String criarPastaGoogleDrive(Drive service, String matriculaAluno) {
         File fileMetadata = new File();
         fileMetadata.setName(matriculaAluno);
@@ -89,7 +82,6 @@ public class SalvarDocumentoService extends BaseController {
         }
         return "";
     }
-
     public boolean verificarExistenciaArquivo(Drive service, String nome) throws IOException {
         String pageToken = null;
         do {
@@ -101,7 +93,6 @@ public class SalvarDocumentoService extends BaseController {
             for (File file : result.getFiles()) {
                 if (file.getName().equals(nome)) {
                     pastaAluno = file.getId();
-
                     return false;
                 }
             }

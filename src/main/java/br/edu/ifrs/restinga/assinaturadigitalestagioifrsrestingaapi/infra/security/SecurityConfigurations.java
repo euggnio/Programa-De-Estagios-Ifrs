@@ -39,12 +39,16 @@ public class SecurityConfigurations {
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST,"/login").permitAll()
                 .requestMatchers(HttpMethod.POST,"/login/google").permitAll()
+                .requestMatchers(HttpMethod.POST, "/login/recuperarSenha").permitAll()
+                .requestMatchers(HttpMethod.POST, "/login/validarToken").permitAll()
+                .requestMatchers(HttpMethod.POST, "/login/trocarSenha/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/cadastrarAluno").permitAll()
                 .requestMatchers(HttpMethod.GET,"/listarVagas").permitAll()
                 .requestMatchers("/assinaturaapi/alunos/**").hasRole("ALUNO")
                 .requestMatchers("/assinaturaapi/servidores/**").hasRole("SERVIDOR")
                 .anyRequest().authenticated()
-                .and().addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+                .and().
+                addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 

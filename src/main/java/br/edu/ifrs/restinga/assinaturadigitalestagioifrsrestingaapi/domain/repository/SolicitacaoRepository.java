@@ -17,6 +17,8 @@ public interface SolicitacaoRepository  extends JpaRepository<SolicitarEstagio,L
 
     int countByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status);
 
+    boolean existsByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status);
+
     List<SolicitarEstagio> findAllByEtapaIsGreaterThanEqualAndStatusNotContaining(String etapa, String deferido);
     List<SolicitarEstagio> findByCursoAndEtapaIsGreaterThanEqualAndStatusNotContainingIgnoreCase(Curso curso, String etapa, String deferido);
     List<SolicitarEstagio> findByCursoAndEtapaEqualsAndStatusNotContainingIgnoreCase(Curso curso, String etapa, String deferido);
@@ -32,13 +34,18 @@ public interface SolicitacaoRepository  extends JpaRepository<SolicitarEstagio,L
 
     @Transactional
     @Modifying
+    @Query( value = "UPDATE solicitar_estagio s SET s.contato_empresa =:novoContato,  WHERE id = :solicitacaoId", nativeQuery = true)
+    void atualizarEmpresa(Long solicitacaoId, String novoContato);
+
+    @Transactional
+    @Modifying
     @Query( value = "UPDATE solicitar_estagio s SET s.status =:texto WHERE id = :solicitacaoId", nativeQuery = true)
     void atualizarStataus(Long solicitacaoId, String texto);
 
     @Transactional
     @Modifying
-    @Query( value = "UPDATE solicitar_estagio s SET s.etapa =:texto WHERE id = :solicitacaoId", nativeQuery = true)
-    void atualizarEtapa(Long solicitacaoId, String texto);
+    @Query(value = "UPDATE solicitar_estagio s SET s.etapa = :novaEtapa, s.status =:novoStatus WHERE id = :solicitacaoId", nativeQuery = true)
+    void atualizarEtapa(Long solicitacaoId, String novaEtapa, String novoStatus);
 
 
 
