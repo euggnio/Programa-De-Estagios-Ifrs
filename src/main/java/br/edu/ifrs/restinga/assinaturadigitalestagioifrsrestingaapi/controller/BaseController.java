@@ -21,9 +21,6 @@ public class BaseController {
     @Autowired
     public EstagiariosRepository estagiariosRepository;
 
-
-
-
     @Autowired
     protected
     PasswordEncoder passwordEncoder;
@@ -43,8 +40,6 @@ public class BaseController {
 
     @Autowired
     public ServidorRepository servidorRepository;
-
-
 
     @Autowired
     public RoleRepository roleRepository;

@@ -24,7 +24,7 @@ public class FileImp extends BaseController{
                 byte[] bytesDocumento = doc.getBytes();
                 Blob blobDoc = new SerialBlob(bytesDocumento);
                 if(assinado){
-                    documento.setNome(doc.getOriginalFilename() + "ASSINADO");
+                    documento.setNome("ASSINADO_ " + doc.getOriginalFilename());
                 }else {
                     documento.setNome(doc.getOriginalFilename());
                 }

@@ -15,11 +15,11 @@ public interface SolicitacaoRepository  extends JpaRepository<SolicitarEstagio,L
     List<SolicitarEstagio> findByAluno(Aluno aluno);
 //    List<SolicitarEstagio> findByServidor(Servidor servidor);
 
-    int countByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status);
+    int countByAluno_IdAndTipoAndStatusNotContainingIgnoreCaseAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status, String statusDeferido);
 
     boolean existsByAluno_IdAndTipoAndStatusNotContainingIgnoreCase(Long aluno, String tipo,String status);
 
-    List<SolicitarEstagio> findAllByEtapaIsGreaterThanEqualAndStatusNotContaining(String etapa, String deferido);
+    List<SolicitarEstagio> findAllByEtapaIsAndStatusEqualsIgnoreCase(String etapa, String status);
     List<SolicitarEstagio> findByCursoAndEtapaIsGreaterThanEqualAndStatusNotContainingIgnoreCase(Curso curso, String etapa, String deferido);
     List<SolicitarEstagio> findByCursoAndEtapaEqualsAndStatusNotContainingIgnoreCase(Curso curso, String etapa, String deferido);
     @Transactional

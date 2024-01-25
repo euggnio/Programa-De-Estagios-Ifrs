@@ -7,6 +7,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAut
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosDetalhamentoAluno;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleEmail;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleUtil;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.ConfigProperties;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.TratadorDeErros;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.security.TokenService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
@@ -34,7 +35,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/login")
 public class AutenticacaoController extends BaseController {
-
+    @Autowired
+    private ConfigProperties configProperties;
     @Autowired
     private AuthenticationManager manager;
     @Autowired
@@ -45,6 +47,7 @@ public class AutenticacaoController extends BaseController {
     //Service para cadastro?
     @PostMapping
     public ResponseEntity efetuarLogin(@RequestBody @Valid DadosAutenticacao dados){
+        System.out.println("BATATA "+ configProperties.getTeste());
         Usuario role =(Usuario) usuarioRepository.findByEmail(dados.email());
         var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(),dados.senha());
         var authenticacao = manager.authenticate(authenticationToken);

@@ -26,7 +26,8 @@ public record DadosAtualizacaoSolicitacao(
         public DadosAtualizacaoSolicitacao(@Nullable Long id, @Nullable String status, @Nullable
         String etapa, @Nullable
                                            String statusEtapaSetorEstagio, @Nullable
-                                           String statusEtapaCoordenador, @Nullable
+                                           String statusEtapaCoordenador,
+                                           @Nullable
                                            boolean editavel, @Nullable String contatoEmpresa, @Nullable String agente, @Nullable String nomeEmpresa, @Nullable String statusEtapaDiretor, @Nullable Boolean ePrivada, @Nullable String observacao) {
                 this.id = id;
                 this.status = status;

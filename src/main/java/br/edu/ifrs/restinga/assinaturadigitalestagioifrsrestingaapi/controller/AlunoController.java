@@ -41,9 +41,9 @@ public class AlunoController extends BaseController{
             return TratadorDeErros.tratarErro409("email");
         }
 
-        if (!emailValidator.validaEmail(aluno.getUsuarioSistema().getEmail())) {
-            return TratadorDeErros.tratarErro400(HttpStatus.BAD_REQUEST);
-        }
+       // if (!emailValidator.validaEmail(aluno.getUsuarioSistema().getEmail())) {
+       //     return TratadorDeErros.tratarErro400(HttpStatus.BAD_REQUEST);
+       // }
         var usuarioSistema = new Usuario(
                 dados.usuarioSistema().getEmail(),
                 passwordEncoder.encode(dados.usuarioSistema().getSenha()),

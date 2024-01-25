@@ -14,9 +14,10 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
-
+import static com.google.api.services.gmail.GmailScopes.GMAIL_SEND;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.gmail.GmailScopes;
 
 
 import javax.mail.MessagingException;
@@ -29,26 +30,16 @@ import java.util.List;
 
 
 public class GoogleUtil {
-    /**
-     * Application name.
-     */
-    private static final String APPLICATION_NAME = "My First Project";
-    /**
-     * Global instance of the JSON factory.
-     */
-    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-    /**
-     * Directory to store authorization tokens for this application.
-     */
-    private static final String TOKENS_DIRECTORY_PATH = "tokens";
 
-    /**
-     * Global instance of the scopes required by this quickstart.
-     * If modifying these scopes, delete your previously saved tokens/ folder.
-     */
-    private static final List<String> SCOPES =
-            Collections.singletonList(DriveScopes.DRIVE);
-    static final String CREDENTIALS_FILE_PATH = "C:\\Users\\eugen\\Documents\\ProgramaDeEstagioIf\\keys\\credentialsAppDrive.json";
+
+    private static final String APPLICATION_NAME = "MailSender";
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private static final String TOKENS_DIRECTORY_PATH = "tokens";
+    private static final List<String> SCOPES = Arrays.asList(
+            DriveScopes.DRIVE,
+            GmailScopes.GMAIL_SEND
+    );
+    static final String CREDENTIALS_FILE_PATH = "C:\\Users\\eugen\\Documents\\ProgramaDeEstagioIf\\keys\\clientKey.json";
 
     public static JsonFactory getJsonFactory(){
         return JSON_FACTORY;
@@ -56,7 +47,6 @@ public class GoogleUtil {
     public static String getApplicationName(){
         return APPLICATION_NAME;
     }
-
 
     /**
      * Creates an authorized Credential object.
@@ -83,14 +73,12 @@ public class GoogleUtil {
                 .setAccessType("offline")
                 .build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
         //returns an authorized Credential object.
-        return credential;
+        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
     public static DadosAutenticacaoGoogle verificarToken(String token){
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new JacksonFactory())
-                .setAudience(Arrays.asList("608337993679-jbh57642rjhkuuaefg5lik3vol1tk4jc.apps.googleusercontent.com"))
                 .build();
         try {
             System.out.println("DADA " + token);
@@ -115,8 +103,6 @@ public class GoogleUtil {
 
     public static Drive createDriveService() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        //Essa linha inicia o serviço do drive, com o transporte definido na linha acima, a  interface do JSON e as credenciais.
-        //Além disso, temos o set para o nome da aplicação.
         return new Drive.Builder(HTTP_TRANSPORT, GoogleUtil.getJsonFactory(), GoogleUtil.getCredentials(HTTP_TRANSPORT))
                 .setApplicationName(GoogleUtil.getApplicationName())
                 .build();

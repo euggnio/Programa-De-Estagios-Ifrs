@@ -23,6 +23,5 @@ public class HistoricoSolicitacao {
     public void mudarSolicitacao(SolicitarEstagio solicitarEstagio, String situacao){
         Historico log = new Historico(LocalDateTime.now(),solicitarEstagio.getEtapa(),situacao,solicitarEstagio);
         historicoSolicitacaoRepository.save(log);
-      
     }
 }
