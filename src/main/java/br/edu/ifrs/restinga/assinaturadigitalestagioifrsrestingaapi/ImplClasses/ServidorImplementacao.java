@@ -50,7 +50,6 @@ public class ServidorImplementacao extends BaseController {
 		} else if (dadosCadastroServidor.cargo().equalsIgnoreCase(cargo[2])) {
 			role = roleRepository.findById(4L);
 		}
-		System.out.println("PASSOY");
 		var servidor = new Servidor(dadosCadastroServidor, curso,role.get());
 
 		if(usuarioRepository.findByEmail(dadosCadastroServidor.usuarioSistema().getEmail())!= null){

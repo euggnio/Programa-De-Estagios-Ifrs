@@ -4,10 +4,15 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.serv
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.FileImp;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.HistoricoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller.BaseController;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.UsuarioRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleEmail;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.DocumentosAssinadosEmailStrategy;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.EmailStrategy;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.EstagioCanceladoEmailStrategy;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.NotificacaoEtapaEmailStrategy;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,10 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class SolicitacaoService extends BaseController {
@@ -31,6 +33,7 @@ public class SolicitacaoService extends BaseController {
 
     @Autowired
     private HistoricoSolicitacao historicoSolicitacao;
+
     @Autowired
     private SalvarDocumentoService salvarDocumentoService;
 
@@ -47,7 +50,6 @@ public class SolicitacaoService extends BaseController {
         SolicitarEstagio solicitacao = criarSolicitacao(dados, curso.get(), aluno.get());
         fileImp.SaveDocBlob(arquivos, solicitacao, false);
         saveSolicitacao(solicitacao, "Cadastrado");
-
         return ResponseEntity.ok().build();
     }
 
@@ -57,16 +59,17 @@ public class SolicitacaoService extends BaseController {
                 aluno,
                 curso,
                 dados.tipo(),
-                dados.titulo(),
                 dados.nomeEmpresa(),
                 dados.ePrivada(),
                 dados.contatoEmpresa(),
                 dados.agente(),
-                dados.conteudo(),
                 dados.observacao(),
                 "Nova",
                 "1",
-                true);
+                true,
+                dados.cargaHoraria(),
+                dados.salario(),
+                dados.turnoEstagio());
     }
 
     private void saveSolicitacao(SolicitarEstagio solicitacao, String situacao) {
@@ -90,7 +93,7 @@ public class SolicitacaoService extends BaseController {
                 case "deferido":
                     setDeferidoStatus(solicitarEstagio.get(), servidor);
                     break;
-                case "em andamento":
+                case "em análise":
                     setEmAndamentoStatus(solicitarEstagio.get(), servidor);
                     break;
                 default:
@@ -126,7 +129,7 @@ public class SolicitacaoService extends BaseController {
     }
 
     private void setEmAndamentoStatus(SolicitarEstagio solicitarEstagio, Servidor servidor) {
-        solicitarEstagio.setStatus("Em andamento");
+        solicitarEstagio.setStatus("Em análise");
         solicitarEstagio.setEtapa("2");
         if (servidor.getRole().getName().contains("ESTAGIO")) {
             solicitarEstagio.setStatusSetorEstagio("");
@@ -150,7 +153,7 @@ public class SolicitacaoService extends BaseController {
             return solicitacaoRepository.findByCursoAndEtapaEqualsAndStatusNotContainingIgnoreCase(curso.get(), "3", "Deferido");
         }
         private List<SolicitarEstagio> obterSolicitacoesParaDiretor() {
-            return solicitacaoRepository.findAllByEtapaIsAndStatusEqualsIgnoreCase("4", "Em Andamento");
+            return solicitacaoRepository.findAllByEtapaIsAndStatusEqualsIgnoreCase("4", "Em análise");
         }
 
         public ResponseEntity<String> indeferirSolicitacao(long id, Servidor servidor, DadosAtualizacaoSolicitacao dados){
@@ -179,90 +182,136 @@ public class SolicitacaoService extends BaseController {
             return ResponseEntity.notFound().build();
         }
 
+        @Transactional
         public ResponseEntity<String> deferirSolicitacao(SolicitarEstagio solicitacao, Servidor servidor, List<MultipartFile> documentos){
-            System.out.println("DEBUGGER 2");
             if(validarDeferimento(solicitacao,servidor.getRole()).equalsIgnoreCase("")){
-                System.out.println("DEBUGGER 4");
+                historicoSolicitacao.mudarSolicitacao(solicitacao, "Deferido");
+                solicitacaoRepository.atualizarStataus(solicitacao.getId(), "Deferindo");
+                System.out.println("Role do servidor deferindo: " + servidor.getRole().getId().toString());
                 switch (servidor.getRole().getId().toString()) {
                     case "3" -> deferirSetorEstagio(solicitacao);
                     case "2" -> deferirCoordenador(solicitacao);
-                    case "4" -> {
-                        deferirDiretor(solicitacao);
-                        try {
-                            GoogleEmaileDrive(solicitacao);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
+                    case "4" -> deferirDiretor(solicitacao);
                 }
-                System.out.println("DEBUGGER 5");
-                salvarArquivos(documentos,solicitacao);
-                solicitacao.setObservacao("");
-                solicitacao.setEditavel(false);
-                saveSolicitacao(solicitacao, "Deferido");
+                if(documentos != null && !documentos.isEmpty()){
+                    salvarArquivos(documentos,solicitacao);
+                }
                 return ResponseEntity.ok().build();
             }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(validarDeferimento(solicitacao,servidor.getRole()));
         }
 
-        public void GoogleEmaileDrive(SolicitarEstagio solicitacao) throws Exception {
-            List<Documento> docsParaDrive = documentoRepository.findBySolicitarEstagioId(solicitacao.getId());
-                salvarDocumentoService.salvarDocumentoDeSolicitacao(solicitacao.getAluno().getMatricula(), docsParaDrive);
-                String titulo = "Documentos Assiandos!!";
-                String msg = "Fim do processo!";
-                String body = """
-                        <html>
-                            <body style='font-family: Arial, sans-serif;'>
-                            <h2 style='color: #3498db;'> Documentos Assinados! </h2>
-                                <p>Olá""" + " " + solicitacao.getAluno().getNomeCompleto() + ",</p>" + """
-                        <p>Os documentos da sua solicitação foram assinados!!!</p>
-                        <p style='background-color: #ecf0f1; padding: 10px; font-size: 18px; font-weight: bold;'>"""
-                        + " https://drive.google.com/drive/u/0/folders/" + salvarDocumentoService.getPastaAluno() + "</p>" + """
-                                    <p>Desejamos um  bom estágio!!!.</p>
-                                </body>
-                            </html>
-                        """;
-                GoogleEmail.sendMail(solicitacao.getAluno().getUsuarioSistema().getEmail(),titulo,msg,body);
-        }
 
-        public void salvarArquivos(List<MultipartFile> docs, SolicitarEstagio solicitarEstagio){
-            if(docs != null && !docs.isEmpty() ){
-                fileImp.SaveDocBlob(docs,solicitarEstagio,true);
+
+
+    private void deferirSetorEstagio(SolicitarEstagio solicitacao){
+        if(solicitacao.getStatus().equalsIgnoreCase("cancelamento")){
+            solicitacao.setEtapa("5");
+            solicitacao.setStatus("Cancelado");
+            estagiariosRepository.updateAtivo(solicitacao.getIdReferente(), false);
+            GoogleEnviarEmailCancelamento(solicitacao);
+        }
+        else {
+            solicitacaoRepository.atualizarStataus(solicitacao.getId(), "Deferindo");
+            solicitacao.setStatusSetorEstagio("Deferido");
+            solicitacao.setStatus("Deferido");
+            solicitacao.setObservacao("");
+            solicitacao.setEtapa("5");
+            solicitacao.setEditavel(false);
+            GoogleEmaileDrive(solicitacao);
+            if(estagiariosRepository.existsBySolicitacaoId(solicitacao.getId())){
+                System.out.println("Estagiario já existe.");
+            }
+            else {
+                estagiariosRepository.save(new Estagiarios(solicitacao,salvarDocumentoService.getPastaAluno()));
             }
         }
-    private void deferirSetorEstagio(SolicitarEstagio solicitacao) {
-        System.out.println("DEBUGGER");
-        solicitacao.setStatusSetorEstagio("Deferido");
-        solicitacao.setEtapa("3");
-        solicitacao.setStatusEtapaCoordenador("Em Andamento");
+        solicitacaoRepository.save(solicitacao);
+    }
+
+        public void GoogleEmaileDrive(SolicitarEstagio solicitacao)  {
+            List<Documento> docsParaDrive = documentoRepository.findBySolicitarEstagioId(solicitacao.getId());
+            if (solicitacao.getStatus().equalsIgnoreCase("relatório")) {
+                docsParaDrive.removeIf(documento -> !documento.getNome().contains("RELATORIO"));
+            }
+
+            try {
+                String nomePasta = solicitacao.getAluno().getNomeCompleto() + " - " + solicitacao.getAluno().getMatricula();
+                salvarDocumentoService.salvarDocumentoDeSolicitacao(nomePasta, 10 ,docsParaDrive);
+                EmailStrategy emailStrategy = new DocumentosAssinadosEmailStrategy();
+                GoogleEmail.sendMail(solicitacao.getAluno().getUsuarioSistema().getEmail()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getBody(solicitacao,salvarDocumentoService.getPastaAluno()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+
+    public void GoogleEnviarEmailCancelamento(SolicitarEstagio solicitacao){
+        EmailStrategy emailStrategy = new EstagioCanceladoEmailStrategy();
+        try {
+            GoogleEmail.sendMail(solicitacao.getAluno().getUsuarioSistema().getEmail()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getBody(solicitacao,""));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
     }
 
     private void deferirCoordenador(SolicitarEstagio solicitacao) {
-        solicitacao.setStatusEtapaCoordenador("Deferido");
-        solicitacao.setEtapa("4");
-        solicitacao.setStatusEtapaDiretor("Em Andamento");
+        if(solicitacao.getStatus().equalsIgnoreCase("relatório")){
+            GoogleEmaileDrive(solicitacao);
+            solicitacao.setEtapa("5");
+            solicitacao.setStatus("Finalizado");
+        }
+        else {
+            solicitacao.setStatusEtapaCoordenador("Deferido");
+            solicitacao.setEtapa("4");
+            solicitacao.setStatusEtapaDiretor("Em análise");
+        }
+        solicitacao.setObservacao("");
+        solicitacao.setEditavel(false);
+        solicitacaoRepository.save(solicitacao);
     }
 
     public void deferirDiretor(SolicitarEstagio solicitacao){
         solicitacao.setEtapa("5");
         solicitacao.setStatusEtapaDiretor("Deferido");
         solicitacao.setStatus("Deferido");
+        solicitacao.setObservacao("");
+        solicitacao.setEditavel(false);
+        solicitacaoRepository.save(solicitacao);
+        GoogleEmaileDrive(solicitacao);
+        estagiariosRepository.save(new Estagiarios(solicitacao,salvarDocumentoService.getPastaAluno()));
+    }
+
+    public void salvarArquivos(List<MultipartFile> docs, SolicitarEstagio solicitarEstagio){
+        if(docs != null && !docs.isEmpty() ){
+            fileImp.SaveDocBlob(docs,solicitarEstagio,true);
+        }
     }
 
     public String validarDeferimento(SolicitarEstagio solicitacao, Role role){
             if(solicitacao.getStatus().equalsIgnoreCase("Indeferido")){
                 return "Não é possivel deferir uma solicitação que já foi concluída ou deferida";
             }
-            if(solicitacao.getEtapa().equals("5")){
+            else if(solicitacao.getStatus().equalsIgnoreCase("Deferido") && solicitacao.getEtapa().equals("5")){
                 return "Está solicitação já foi concluida e ela não pode mais ser deferida.";
             }
-            else if (solicitacao.getEtapa().equals("2") && !(role.getId() == 3)) {
+            else if (solicitacao.getStatus().equalsIgnoreCase("finalizada")){
+                 return "Está solicitação já foi concluida e ela não pode mais ser deferida.";
+            }
+            else if(solicitacao.getEtapa().equals("2") && !(role.getId() == 3)) {
                 return "Apenas o setor de estágios pode deferir uma solicitação na etapa 2.";
             }
-            else if (solicitacao.getEtapa().equals("3") && !(role.getId() == 2)) {
+            else if (solicitacao.getEtapa().equals("3") && (role.getId() == 4)) {
                 return "Apenas o coordenador pode deferir uma solicitação na etapa 3.";
             }
-            else if (solicitacao.getEtapa().equals("4") && !(role.getId() == 4)) {
+            else if (solicitacao.getEtapa().equals("4") && (role.getId() == 2 )) {
                 return "Apenas o diretor pode deferir uma solicitação na etapa 4.";
             }
             else{
@@ -270,5 +319,79 @@ public class SolicitacaoService extends BaseController {
             }
         }
 
+    public ResponseEntity<String> editarEtapa(long id, String etapa, long role){
+        SolicitarEstagio solicitacao = solicitacaoRepository.findById(id).get();
+        EmailStrategy emailStrategy = new NotificacaoEtapaEmailStrategy();
 
+        String emailNovoResponsavel = "";
+        if(etapa.equalsIgnoreCase("3")){
+            Optional<Servidor> coordenador = servidorRepository.findServidorByCurso_Id(solicitacao.getCurso().getId());
+            if(coordenador.isPresent()){
+                emailNovoResponsavel = coordenador.get().getUsuarioSistema().getEmail();
+            }
+            else{
+                return ResponseEntity.notFound().build();
+
+            }
+        }
+        else if(etapa.equalsIgnoreCase("4")){
+            Optional<Servidor> diretor = servidorRepository.findServidorByCurso_Id(16);
+            if (diretor.isPresent()){
+                emailNovoResponsavel = diretor.get().getUsuarioSistema().getEmail();
+            }
+            else{
+                return ResponseEntity.notFound().build();
+            }
+        }
+
+        if(!etapa.equalsIgnoreCase(solicitacao.getEtapa())){
+            try {
+                System.out.println("Email enviado para: " + emailNovoResponsavel);
+                System.out.println("Email enviado para: " + solicitacao.getAluno().getUsuarioSistema().getEmail());
+                GoogleEmail.sendMail(emailNovoResponsavel
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getBody(solicitacao, String.valueOf(solicitacao.getId())));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (etapa.equalsIgnoreCase("5")) {
+            solicitacaoRepository.atualizarEtapa(id, etapa, "Deferido");
+        } else if (solicitacao.getStatus().equalsIgnoreCase("relatório")) {
+            solicitacaoRepository.atualizarEtapa(id, etapa, "Relatório");
+        } else {
+            solicitacaoRepository.atualizarEtapa(id, etapa, "Em análise");
+        }
+        historicoSolicitacao.salvarHistoricoSolicitacaoId(id, role, "Etapa foi modificada de " + solicitacao.getEtapaAtualComoString() + " para " + solicitacao.verificarEtapaComoString(etapa));
+        return ResponseEntity.ok().build();
+    }
+
+
+    public ResponseEntity salvarRelatorioFinal(SolicitarEstagio solicitacao, List<MultipartFile> arquivos) {
+        if(solicitacao.getEtapa().equals("5")){
+            historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), 1, "Relatório final foi adicionado pelo aluno");
+            fileImp.criarRelatorioFinal(arquivos.get(0),solicitacao);
+            solicitacao.setStatus("Relatório");
+            solicitacao.setEtapa("2");
+            solicitacao.setRelatorioEntregue(true);
+            solicitacaoRepository.save(solicitacao);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.badRequest().build();
+    }
+
+    public ResponseEntity cancelarEstagio(SolicitarEstagio solicitacao, List<MultipartFile> arquivos) {
+        if(solicitacao.getEtapa().equals("5")){
+            historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), 1, "Solicitação de cancelamento foi adicionada pelo aluno");
+            fileImp.SaveDocBlob(arquivos, solicitacao, false);
+            solicitacao.setStatus("Cancelamento");
+            solicitacao.setTipo("Cancelamento");
+            solicitacao.setEtapa("2");
+            solicitacaoRepository.save(solicitacao);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.badRequest().build();
+    }
 }

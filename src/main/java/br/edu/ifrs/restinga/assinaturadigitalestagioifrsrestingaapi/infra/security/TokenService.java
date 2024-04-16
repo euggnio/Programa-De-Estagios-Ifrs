@@ -29,9 +29,10 @@ public class TokenService {
                     .withIssuer("API ASSINATURA.EST.IFRS")
                     .withSubject(usuario.getEmail())
                     .withExpiresAt(dataExpiracao())
+                    .withClaim("role",usuario.getRoles().getName())
                     .sign(algoritimo);
+
         } catch (JWTCreationException exception){
-            // Invalid Signing configuration / Couldn't convert Claims.
             throw  new RuntimeException("erro ao gerar token jwt",exception);
         }
     }
@@ -45,21 +46,43 @@ public class TokenService {
                     .withExpiresAt(tempoExpiracao(minutos))
                     .sign(algoritimo);
         } catch (JWTCreationException exception){
-            // Invalid Signing configuration / Couldn't convert Claims.
             throw  new RuntimeException("erro ao gerar token jwt",exception);
         }
     }
 
 
     public String getSubject(String tokenJWT) throws JWTVerificationException{
-
         var algoritimo = Algorithm.HMAC256(secret);
         return JWT.require(algoritimo)
                 .withIssuer("API ASSINATURA.EST.IFRS")
                 .build()
                 .verify(tokenJWT)
                 .getSubject();
+    }
 
+    public String getRole(String tokenJWT) throws JWTVerificationException{
+        var algoritimo = Algorithm.HMAC256(secret);
+        return JWT.require(algoritimo)
+                .withIssuer("API ASSINATURA.EST.IFRS")
+                .build()
+                .verify(tokenJWT)
+                .getClaim("role").asString();
+    }
+
+    public  boolean isServidor(String token){
+        if(token == null || token.isEmpty()){
+            return false;
+        }
+        String role = this.getRole(token);
+        return role.toLowerCase().contains("servidor") || role.toLowerCase().contains("sestagio");
+    }
+
+    public  boolean isAluno(String token){
+        if(token == null || token.isEmpty()){
+            return false;
+        }
+        String role = this.getRole(token);
+        return role.toLowerCase().contains("aluno");
     }
 
     private Instant dataExpiracao() {

@@ -3,8 +3,10 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.DocumentoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.SolicitacaoRepository;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.DocumentoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SalvarDocumentoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DocumentoDto;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.security.TokenService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Documento;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
 import jakarta.transaction.Transactional;
@@ -33,32 +35,21 @@ public class DocumentoController {
     DocumentoRepository documentoRepository;
     @Autowired
     SolicitacaoRepository solicitacaoRepository;
+    @Autowired
+    DocumentoService documentoService;
+    @Autowired
+    TokenService tokenService;
 
     @PostMapping("/salvarDocumento")
     @ResponseBody
     @Transactional
     public ResponseEntity salvarDocumentos(@RequestPart("solicitacaoId") Long id,
-                                           @RequestParam("file") List<MultipartFile> documentos) {
+                                           @RequestParam("file") List<MultipartFile> documentos,
+                                           @RequestHeader("Authorization") String token) {
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
-        if (solicitacao.get().isEditavel()) {
-            try {
-                if(documentoRepository.countBySolicitarEstagioId(id) > 32){
-                    return ResponseEntity.status(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED).body("Limite de dados atingido!!");
-                }
-
-            for (MultipartFile documento : documentos) {
-                Documento doc = new Documento();
-                byte[] bytesDocumento = documento.getBytes();
-                Blob blobDoc = new SerialBlob(bytesDocumento);
-                doc.setNome(documento.getOriginalFilename());
-                doc.setDocumento(blobDoc);
-                doc.setSolicitarEstagio(solicitacao.get());
-                documentoRepository.save(doc);
-                return ResponseEntity.ok().build();
-            }
-                } catch (IOException | SQLException e) {
-                    return ResponseEntity.badRequest().body("Algum erro ocorreu!");
-            }
+        if(solicitacao.isPresent()){
+            return documentoService.salvarDocumentosSolicitacao(solicitacao.get(), documentos,email);
         }
         return ResponseEntity.badRequest().body("Impossivel adicionar documentos!");
     }
@@ -102,15 +93,10 @@ public class DocumentoController {
     }
 
     @DeleteMapping("/deletarDocumento")
-    public ResponseEntity<String> deletarDocumento(@RequestParam Long chamadoId){
-        Optional<Documento> doc = documentoRepository.findById(chamadoId);
-        if(doc.isPresent()){
-            documentoRepository.deleteById(chamadoId);
-            return ResponseEntity.ok("Documento deletado");
-        }
-        else{
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity deletarDocumento(@RequestParam Long chamadoId,
+                                           @RequestHeader("Authorization") String token){
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        return documentoService.deletarDocumento(chamadoId, email);
     }
 
 
@@ -175,7 +161,6 @@ public class DocumentoController {
     public ResponseEntity<List<DocumentoDto>> listarDocumentosPorSolicitarEstagioId(@PathVariable("solicitarEstagioId") Long solicitarEstagioId) {
         List<Documento> documentos = documentoRepository.findBySolicitarEstagioId(solicitarEstagioId);
         List<DocumentoDto> documentosDto = new ArrayList<>();
-
         for (Documento documento : documentos) {
             DocumentoDto documentoDto = new DocumentoDto();
             documentoDto.setAssinado(documento.isAssinado());

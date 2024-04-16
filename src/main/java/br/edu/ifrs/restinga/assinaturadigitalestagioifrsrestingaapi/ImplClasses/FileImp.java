@@ -19,6 +19,7 @@ public class FileImp extends BaseController{
     @Transactional
     public boolean SaveDocBlob(List<MultipartFile> docs, SolicitarEstagio solicitacaoId, boolean assinado) {
         try {
+            System.out.println("Entrou no SaveDocBlob");
             for (MultipartFile doc : docs) {
                 Documento documento = new Documento();
                 byte[] bytesDocumento = doc.getBytes();
@@ -37,6 +38,23 @@ public class FileImp extends BaseController{
         } catch (IOException | SQLException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    public Documento criarRelatorioFinal(MultipartFile doc, SolicitarEstagio solicitacaoId) {
+        try {
+            Documento documento = new Documento();
+            byte[] bytesDocumento = doc.getBytes();
+            Blob blobDoc = new SerialBlob(bytesDocumento);
+            documento.setNome("RELATORIO_FINAL_" +doc.getOriginalFilename());
+            documento.setDocumento(blobDoc);
+            documento.setAssinado(false);
+            documento.setSolicitarEstagio(solicitacaoId);
+            documentoRepository.save(documento);
+            return documento;
+        } catch (IOException | SQLException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }

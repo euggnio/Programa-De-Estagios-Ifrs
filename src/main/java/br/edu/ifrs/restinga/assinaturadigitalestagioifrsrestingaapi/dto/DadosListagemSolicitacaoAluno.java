@@ -7,17 +7,19 @@ import java.util.List;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Historico;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
+import jakarta.annotation.Nullable;
 
-public record DadosListagemSolicitacaoAluno(Long id, String titulo, String conteudo, String status, String tipo,
+import javax.validation.constraints.Null;
+
+public record DadosListagemSolicitacaoAluno(Long id, String status, String tipo,
                                             String etapa, boolean editavel, String observacao,
                                             LocalDateTime dataSolicitacao, Aluno aluno, List<Historico> historico,
                                             LocalDate finalDataEstagio, LocalDate inicioDataEstagio, String agente,
-                                            String nomeEmpresa, String contatoEmpresa, boolean ePrivada) {
+                                            String nomeEmpresa, String contatoEmpresa, boolean ePrivada
+                                            , String cargaHoraria, String salario, String turnoEstagio, boolean relatorioEntregue) {
 
     public DadosListagemSolicitacaoAluno(SolicitarEstagio solicitarEstagio) {
         this(solicitarEstagio.getId()
-                , solicitarEstagio.getTitulo()
-                , solicitarEstagio.getConteudo()
                 , solicitarEstagio.getStatus()
                 , solicitarEstagio.getTipo()
                 , solicitarEstagio.getEtapa()
@@ -32,6 +34,10 @@ public record DadosListagemSolicitacaoAluno(Long id, String titulo, String conte
                 , solicitarEstagio.getNomeEmpresa()
                 , solicitarEstagio.getContatoEmpresa()
                 , solicitarEstagio.getEPrivada()
+                , solicitarEstagio.getCargaHoraria()
+                , solicitarEstagio.getSalario()
+                , solicitarEstagio.getTurnoEstagio()
+                , solicitarEstagio.isRelatorioEntregue()
         );
     }
 

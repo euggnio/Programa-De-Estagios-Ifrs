@@ -61,6 +61,7 @@ WHERE NOT EXISTS (
     WHERE usuarios.email = dados.email
 );
 
+
 INSERT INTO servidores (cargo, nome, curso_id, role_id, usuario_sistema_id)
 SELECT 'Setor estágio' AS cargo, 'admin' AS nome, 15 AS curso_id, 3 AS role_id, 1 AS usuario_sistema_id
 FROM dual

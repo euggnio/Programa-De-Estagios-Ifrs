@@ -18,8 +18,6 @@ public record DadosCadastroAluno(
     String turno,
         @NotBlank
     String matricula,
-        @NotBlank
-    String ingresso,
         @NotNull
         @Positive
         long curso

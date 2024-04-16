@@ -12,6 +12,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import org.hibernate.validator.constraints.Length;
 
 @Entity(name = "SolicitarEstagio")
 @Data
@@ -31,15 +32,15 @@ public class SolicitarEstagio {
     @OneToOne
     private Aluno aluno;
 
+    @Length(max = 25)
     private String status;
 
     private String statusEtapaCoordenador;
-
     private String statusSetorEstagio;
-
     private String statusEtapaDiretor;
 
-    @OneToOne Curso curso;
+    @OneToOne
+    Curso curso;
 
     @OneToMany(mappedBy = "solicitarEstagio", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JsonManagedReference
@@ -54,8 +55,6 @@ public class SolicitarEstagio {
     @Column(columnDefinition = "DATETIME")
     private LocalDate inicioDataEstagio;
 
-    private String titulo;
-
     private String nomeEmpresa;
 
     private Boolean ePrivada;
@@ -64,8 +63,7 @@ public class SolicitarEstagio {
 
     private String agente;
 
-    private String conteudo;
-
+    @Length(max = 2)
     private String etapa;
 
     private boolean editavel;
@@ -74,7 +72,19 @@ public class SolicitarEstagio {
 
     private String resposta;
 
-    public SolicitarEstagio(LocalDate finalDataEstagio,LocalDate inicioDataEstagio, Aluno aluno, Curso curso, String tipo, String titulo, String nomeEmpresa,Boolean ePrivada,String contatoEmpresa, String agente, String conteudo, String observacao, String status, String etapa, boolean editavel) {
+    private Long idReferente;
+
+    private String cargaHoraria;
+
+    private String salario;
+
+    private String turnoEstagio;
+
+    private boolean relatorioEntregue;
+    public SolicitarEstagio(LocalDate finalDataEstagio,LocalDate inicioDataEstagio, Aluno aluno, Curso curso
+            , String tipo,  String nomeEmpresa,Boolean ePrivada,String contatoEmpresa, String agente
+            , String observacao, String status, String etapa, boolean editavel
+            , String cargaHoraria, String salario, String turnoEstagio) {
         this.finalDataEstagio = finalDataEstagio;
         this.inicioDataEstagio = inicioDataEstagio;
         this.aluno = aluno;
@@ -82,20 +92,61 @@ public class SolicitarEstagio {
         this.tipo = tipo;
         this.dataSolicitacao = LocalDateTime.now();
         this.status = status;
-        this.conteudo = conteudo;
         this.etapa = etapa;
-        this.titulo = aluno.getNomeCompleto();
         this.observacao = observacao;
         this.nomeEmpresa = nomeEmpresa;
         this.ePrivada = ePrivada;
         this.contatoEmpresa = contatoEmpresa;
         this.agente = agente;
-        this.resposta = resposta;
         this.editavel = editavel;
-        this.resposta = "";
+        this.cargaHoraria = cargaHoraria;
+        this.salario = salario;
+        this.turnoEstagio = turnoEstagio;
         this.statusEtapaCoordenador = "";
         this.statusSetorEstagio = "";
         this.statusEtapaDiretor = "";
+        this.relatorioEntregue = false;
+    }
+
+    public String getEtapaAtualComoString(){
+        switch (this.etapa) {
+            case "1" -> {
+                return "Aluno";
+            }
+            case "2" -> {
+                return "Setor de estágio";
+            }
+            case "3" -> {
+                return "Coordenador";
+            }
+            case "4" -> {
+                return "Diretor";
+            }
+            default -> {
+                return "Sistema";
+            }
+        }
+    }
+
+    public String verificarEtapaComoString(String etapa){
+        switch (etapa) {
+            case "1" -> {
+                return "aluno";
+            }
+            case "2" -> {
+                return "Setor de estágio";
+            }
+            case "3" -> {
+                return "Coordenador";
+            }
+            case "4" -> {
+                return "Diretor";
+            }
+            default -> {
+                return "Erro";
+            }
+        }
+
     }
 
 }

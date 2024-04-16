@@ -10,11 +10,17 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
+
+import javax.mail.MessagingException;
+import javax.sql.rowset.serial.SerialBlob;
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
+import java.sql.Blob;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -25,28 +31,21 @@ public class SalvarDocumentoService extends BaseController {
     private String pastaAluno;
     private final String pastaSistemaEstagios = "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah";
 
-    public void salvarDocumentoDeSolicitacao(String idChamado, List<Documento> documentos) throws IOException, GeneralSecurityException {
+    public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos) throws IOException, GeneralSecurityException {
         Drive service = GoogleUtil.createDriveService();
-        //Linhas comentadas servem para imprimir todos itens do drive, serve como debug.
-        //FileList result = service.files().list()
-        //         .setPageSize(10)
-        //         .setFields("nextPageToken, files(id, name)")
-        //         .execute();
-        // List<File> files = result.getFiles();
-        // if (files == null || files.isEmpty()) {
-        //     System.out.println("No files found.");
-        // } else {
-        //     System.out.println("Files:");
-        //     for (File file : files) {
-        //         System.out.printf("%s (%s)\n", file.getName(), file.getId());
-        //     }
-        //}
-        if (verificarExistenciaArquivo(service, idChamado)) {
-            pastaAluno = criarPastaGoogleDrive(service, idChamado);
+        String pastaCursoId = verificarExistenciaPastaCurso(service, idCurso);
+        if (pastaCursoId.isEmpty()) {
+            pastaCursoId = criarPastaCurso(service, idCurso);
         }
+        System.out.println("::Pasta do curso: " + pastaCursoId);
+        if (verificarExistenciaArquivo(service, idChamado, pastaCursoId)) {
+            pastaAluno = criarPastaGoogleDrive(service, idChamado, pastaCursoId);
+        }
+
         for (Documento documento : documentos) {
             File fileMetadata = new File();
             fileMetadata.setName(documento.getNome());
+            fileMetadata.setParents(Collections.singletonList(pastaCursoId));
             fileMetadata.setParents(Collections.singletonList(pastaAluno));
             byte[] bytes;
             try (InputStream inputStream = documento.getDocumento().getBinaryStream()) {
@@ -66,23 +65,47 @@ public class SalvarDocumentoService extends BaseController {
             }
         }
     }
-    public String criarPastaGoogleDrive(Drive service, String matriculaAluno) {
+    public String criarPastaGoogleDrive(Drive service, String matriculaAluno, String pastaCursoId) {
         File fileMetadata = new File();
         fileMetadata.setName(matriculaAluno);
         fileMetadata.setMimeType("application/vnd.google-apps.folder");
-        fileMetadata.setParents(Collections.singletonList(pastaSistemaEstagios));
+        fileMetadata.setParents(Collections.singletonList(pastaCursoId));
         try {
             File file = service.files().create(fileMetadata)
                     .setFields("id")
                     .execute();
             System.out.println("::PASTA no google drive criada para aluno de matricula: " + matriculaAluno);
+            System.out.println("::ID da pasta: " + file.getId());
             return file.getId();
         } catch (IOException e) {
             System.out.println("::ERRO ao criar pasta no google drive: " + e.getMessage());
         }
         return "";
     }
-    public boolean verificarExistenciaArquivo(Drive service, String nome) throws IOException {
+    public boolean verificarExistenciaArquivo(Drive service, String nome, String pastaCursoId) throws IOException {
+        String pageToken = null;
+        do {
+            System.out.println("::Pasta do curso: " + pastaCursoId);
+            FileList result = service.files().list()
+
+                    .setQ("'" +pastaCursoId + "' in parents and mimeType='application/vnd.google-apps.folder'")
+                    .setFields("nextPageToken, files(id, name)")
+                    .setPageToken(pageToken)
+                    .execute();
+            for (File file : result.getFiles()) {
+                System.out.println("::Pasta do aluno: " + file.getName());
+                if (file.getName().equals(nome)) {
+                    System.out.println("::Pasta do aluno encontrada: " + file.getId());
+                    pastaAluno = file.getId();
+                    return false;
+                }
+            }
+            pageToken = result.getNextPageToken();
+        } while (pageToken != null);
+        return true;
+    }
+
+    public String verificarExistenciaPastaCurso(Drive service, long idCurso) throws IOException {
         String pageToken = null;
         do {
             FileList result = service.files().list()
@@ -91,13 +114,57 @@ public class SalvarDocumentoService extends BaseController {
                     .setPageToken(pageToken)
                     .execute();
             for (File file : result.getFiles()) {
-                if (file.getName().equals(nome)) {
-                    pastaAluno = file.getId();
-                    return false;
+                if (file.getName().equals(getNomeCursoPorId(idCurso))) {
+                    return file.getId();
                 }
             }
             pageToken = result.getNextPageToken();
         } while (pageToken != null);
-        return true;
+        return "";
+    }
+
+    public String criarPastaCurso(Drive service, long idCurso) {
+        File fileMetadata = new File();
+        fileMetadata.setName(""+ getNomeCursoPorId(idCurso));
+        fileMetadata.setMimeType("application/vnd.google-apps.folder");
+        fileMetadata.setParents(Collections.singletonList(pastaSistemaEstagios));
+        try {
+            File file = service.files().create(fileMetadata)
+                    .setFields("id")
+                    .execute();
+            System.out.println("::PASTA no Google Drive criada para o curso: " + idCurso);
+            System.out.println("::ID da pasta do curso: " + file.getId());
+            return file.getId();
+        } catch (IOException e) {
+            System.out.println("::ERRO ao criar pasta do curso no Google Drive: " + e.getMessage());
+        }
+        return "";
+    }
+
+    public String getNomeCursoPorId(long idCurso) {
+        if(idCurso == 10) return "Análise e Desenvolvimento de Sistemas - " + idCurso;
+        if(idCurso == 11) return "Letras Português e Espanhol - " + idCurso;
+        if(idCurso == 12) return "Eletrônica Industrial - " + idCurso;
+        if(idCurso == 13) return "Gestão Desportiva e de Lazer - " + idCurso;
+        if(idCurso == 14) return "Processos Gerenciais - " + idCurso;
+        if(idCurso == 15) return "Setor Estágio - " + idCurso;
+        if(idCurso == 16) return "Diretor - " + idCurso;
+        if(idCurso == 17) return "Lazer - " + idCurso;
+        if(idCurso == 18) return "Informática - " + idCurso;
+        if(idCurso == 19) return "Eletrônica - " + idCurso;
+        if(idCurso == 20) return "Guia de Turismo - " + idCurso;
+        return "Curso não encontrado ";
+    }
+    public static void main(String... args) throws IOException, GeneralSecurityException, SQLException, MessagingException {
+        SalvarDocumentoService salvarDocumentoService = new SalvarDocumentoService();
+        // Criar arquivo falso para teste
+        Documento documento = new Documento();
+        File filePath = new File();
+        documento.setNome("teste.pdf");
+            Blob blob = new SerialBlob("teste".getBytes()); // Criação do blob usando o array de bytes
+            documento.setDocumento(blob);
+        List<Documento> docs = new ArrayList<>();
+        docs.add(documento);
+        salvarDocumentoService.salvarDocumentoDeSolicitacao("test3", 12, docs);
     }
 }

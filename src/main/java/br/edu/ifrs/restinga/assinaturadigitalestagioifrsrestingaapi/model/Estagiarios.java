@@ -19,14 +19,13 @@ public class Estagiarios {
     private Long id;
     @ManyToOne
     private SolicitarEstagio solicitacao;
-
     private String urlPastaDocumentos;
-
-
+    private boolean ativo;
 
     public Estagiarios(SolicitarEstagio solicitacao, String urlPastaDocumentos){
         this.solicitacao = solicitacao;
         this.urlPastaDocumentos = "https://drive.google.com/drive/u/0/folders/" + urlPastaDocumentos;
+        this.ativo = true;
     }
 
 

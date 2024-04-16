@@ -29,7 +29,6 @@ public class Usuario implements UserDetails {
     private String email;
     @NotBlank
     private String senha;
-
     @ManyToOne
     private Role roles;
 
@@ -56,9 +55,8 @@ public class Usuario implements UserDetails {
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_ALUNO"),new SimpleGrantedAuthority("ROLE_SERVIDOR"));
+        return List.of(new SimpleGrantedAuthority(this.roles.getName()));
     }
-
 
     @Override
     @JsonIgnore

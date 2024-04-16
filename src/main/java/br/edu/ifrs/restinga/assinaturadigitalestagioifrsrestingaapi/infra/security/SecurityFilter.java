@@ -32,13 +32,12 @@ public class SecurityFilter extends OncePerRequestFilter {
                 var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        }catch ( JWTVerificationException ex){
+        } catch (JWTVerificationException ex) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token expirado. Faça login novamente.");
             response.getWriter().flush();
             return;
         }
-
         filterChain.doFilter(request, response);
     }
 

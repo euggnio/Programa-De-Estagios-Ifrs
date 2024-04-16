@@ -58,22 +58,18 @@ public class GoogleUtil {
 
     public  static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT)
             throws IOException {
-        // Load client secrets.
         InputStream in = new FileInputStream(CREDENTIALS_FILE_PATH);
         if (in == null) {
             throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
         }
         GoogleClientSecrets clientSecrets =
                 GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-        // Build flow and trigger user authorization request.
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
                 .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
                 .setAccessType("offline")
                 .build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        //returns an authorized Credential object.
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
@@ -81,7 +77,6 @@ public class GoogleUtil {
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new JacksonFactory())
                 .build();
         try {
-            System.out.println("DADA " + token);
             GoogleIdToken idToken = verifier.verify(token);
             if (idToken != null) {
                 GoogleIdToken.Payload payload = idToken.getPayload();
@@ -110,7 +105,6 @@ public class GoogleUtil {
 
     public static void main(String... args) throws IOException, GeneralSecurityException, SQLException, MessagingException {
         verificarToken("eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ4YTYzYmM0NzY3Zjg1NTBhNTMyZGM2MzBjZjdlYjQ5ZmYzOTdlN2MiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI2MDgzMzc5OTM2NzktamJoNTc2NDJyamhrdXVhZWZnNWxpazN2b2wxdGs0amMuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI2MDgzMzc5OTM2NzktamJoNTc2NDJyamhrdXVhZWZnNWxpazN2b2wxdGs0amMuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTcwMTkwMDc2Njk3ODMzODAwMzEiLCJoZCI6InJlc3RpbmdhLmlmcnMuZWR1LmJyIiwiZW1haWwiOiIyMDIwMDA2MjkzQHJlc3RpbmdhLmlmcnMuZWR1LmJyIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTcwNjEzMzg0NywibmFtZSI6IkVVR8OKTklPIENBUlRBR0VOQSBST0RSSUdVRVMiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS3VTTXVNd3FoOWtMbHA2UjFjd0c0TUZSN0Vzd2VHZXhHdFhoWkdaSllPPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6IkVVR8OKTklPIENBUlRBR0VOQSIsImZhbWlseV9uYW1lIjoiUk9EUklHVUVTIiwibG9jYWxlIjoicHQtQlIiLCJpYXQiOjE3MDYxMzQxNDcsImV4cCI6MTcwNjEzNzc0NywianRpIjoiOWI2ODYzMmYwOTVlYzNlZThjOWQ0MDBhOGMxYmJmN2MxZDQzMDhhOSJ9.ho_SbM-c4LUvCTobxKdv_M1UM8GVrAWLYPiacKn4aDjdj6BivkmN9CpYQ_Ypei8Q3cBFa1H3lCD1YbF9oeWowFmin4poG5L8SCFNDrzyx4dv4VWxCu_GM6XhknfDc_iBBzrwD3qSZhhqxHnxr68ZkyBE6diqjirROHcvT-cQOX0ika7k4Iuy5C54Jkn1YpZj_bafrcfMJRo7U5KUP36vNhzICZkPyyjSHxOgF97NNrZwGtjhfNqznytBFPukak7dGX4TyG6BmF5GH1a74SpPjBlXPfMvTsZ2RggJNT4eB-4RssO6974MFWF07YuR8QimAlR6uL9Evb-ESRFEG3dmrQ");
-
     }
 
 

@@ -1,10 +1,7 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file;
 
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
+import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,26 +11,19 @@ import java.util.List;
 
 public class SalvarDocumento {
 
-
-
     public String salvar(MultipartFile documento, int chamadoId) throws IOException {
         String nomeArquivo = documento.getOriginalFilename();
         //Difinindo diretorio de destino
         Path diretorioDestino = Paths.get("./documentos/chamados/" + chamadoId);
-
-
             Files.createDirectories(diretorioDestino);
             // Salva o arquivo no diretório de destino
             byte[] bytesArquivo = documento.getBytes();
             //caminho final do arquivo
             Path arquivoDestino = diretorioDestino.resolve(nomeArquivo);
             Files.write(arquivoDestino, bytesArquivo);
-
             // Msg de sucesso
             return "Arquivo " + nomeArquivo + " foi salvo com sucesso no diretório " + diretorioDestino.toString();
-
     }
-
     public String deletar(int chamadoId){
         Path diretorioDestino = Paths.get("./documentos/chamados/" + chamadoId);
         try{
@@ -47,8 +37,6 @@ public class SalvarDocumento {
             return "Erro ao deletar diretorio: " + e.getMessage();
         }
     }
-
-
 
     //Retorna a lista com o nome dos documentos.
     public List<String> listarDocumentos(String chamadoId){

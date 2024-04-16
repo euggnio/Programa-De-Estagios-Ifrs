@@ -20,70 +20,45 @@ public class Aluno {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nomeCompleto;
-
     @OneToOne
     @JoinColumn(name = "usuario_sistema_id")
     private Usuario usuarioSistema;
-
     private String turno;
     private String matricula;
-    private String ingresso;
-
     @OneToOne
     @JoinColumn(name = "role_id")
     private Role role;
-
     @OneToOne
     private Curso curso;
 
-    private boolean ativo;
-
     public Aluno(DadosCadastroAluno dados, Curso curso, Role role) {
-        this.ativo = true;
         this.nomeCompleto = dados.nomeCompleto();
         this.usuarioSistema = dados.usuarioSistema();
         this.turno = dados.turno();
         this.matricula = dados.matricula();
-        this.ingresso = dados.ingresso();
         this.curso = curso;
         this.role = role;
     }
 
     public Aluno(DadosAutenticacaoGoogle data, Role role){
-        this.ativo = true;
         this.nomeCompleto = data.name();
         this.role = role;
 
     }
 
-
-
     public void atualizarInformacoes(@Valid DadosAtualizacaoAluno dados, Curso curso) {
         if(dados.nomeCompleto() != null){
             this.nomeCompleto = dados.nomeCompleto();
         }
-
-
         if(dados.turno() != null){
             this.turno = dados.turno();
         }
-
         if(dados.matricula() != null){
             this.matricula = dados.matricula();
         }
-
-        if(dados.ingresso() != null){
-            this.ingresso = dados.ingresso();
-        }
-
         if(dados.curso() != null){
             this.curso = curso;
         }
 
     }
-
-    public void desativar() {
-        this.ativo = false;
-    }
-    
 }

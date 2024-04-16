@@ -1,8 +1,6 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
-
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.HistoricoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.FileImp;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SalvarDocumentoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SolicitacaoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroSolicitacao;
@@ -10,18 +8,18 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosLis
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoServidor;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleEmail;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
-import jakarta.transaction.Transactional;
-import org.apache.http.protocol.HTTP;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.EmailStrategy;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.ObservacaoEmailStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -36,16 +34,11 @@ public class SolicitacaoController extends BaseController {
     private HistoricoSolicitacao historicoSolicitacao;
     @Autowired
     private SolicitacaoService solicitacaoService;
-    @Autowired
-    private SalvarDocumentoService salvarDocumentoService;
-
-    //Em teste para evitar deadlock diretor.
-    private final Object lock = new Object();
 
     @PostMapping(value = "/cadastrarSolicitacao")
     public ResponseEntity cadastrarSolicitacao(@RequestPart("dados") DadosCadastroSolicitacao dados,
                                                @RequestParam("file") List<MultipartFile> arquivos) {
-            return solicitacaoService.cadastrarSolicitacao(dados, arquivos);
+        return solicitacaoService.cadastrarSolicitacao(dados, arquivos);
     }
 
     @GetMapping("/listarDocumentos")
@@ -55,10 +48,17 @@ public class SolicitacaoController extends BaseController {
         return solicitacao.get().getDocumento().get(1).getNome();
     }
 
-
+    @Transactional
     @GetMapping("/setEdicaoDocumentosSolicitacao")
     public ResponseEntity setEditavel(@RequestParam long id, @RequestHeader("Authorization") String token) {
-        if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+        //Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        //Usuario userDetails = (Usuario) authentication.getPrincipal();
+        //System.out.println("TESTE 4: " + (userDetails.getRoles().getName()).equals("ROLE_SESTAGIO"));
+
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        if (usuarioRepository.findByEmailAndNotRoleId1(email).isPresent()) {
+            String statusAtual = solicitacaoRepository.verificarEditavel(id);
+            historicoSolicitacao.salvarHistoricoSolicitacaoId(id, usuarioRepository.findRoleIdByEmail(email), "Edição de documentos foi " + statusAtual);
             solicitacaoRepository.atualizarEditavelParaTrue(id);
             return ResponseEntity.ok().build();
         }
@@ -67,7 +67,19 @@ public class SolicitacaoController extends BaseController {
 
     @GetMapping("/editarobservacaoSolicitacao")
     public ResponseEntity setObservacao(@RequestParam long id, @RequestParam String texto, @RequestHeader("Authorization") String token) {
-        if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        if (usuarioRepository.findByEmailAndNotRoleId1(email).isPresent()) {
+            SolicitarEstagio so = solicitacaoRepository.findById(id).get();
+            historicoSolicitacao.salvarHistoricoSolicitacaoId(id, usuarioRepository.findRoleIdByEmail(email), "Observação para edição: " + texto);
+            EmailStrategy emailStrategy = new ObservacaoEmailStrategy();
+            try {
+                GoogleEmail.sendMail(so.getAluno().getUsuarioSistema().getEmail()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getTitle()
+                        ,emailStrategy.getBody(so, texto));
+            } catch (Exception e) {
+                throw new RuntimeException("Erro ao enviar email");
+            }
             solicitacaoRepository.atualizarObservacao(id, texto);
             return ResponseEntity.ok().build();
         }
@@ -75,14 +87,19 @@ public class SolicitacaoController extends BaseController {
     }
 
     @PostMapping("/editarEmpresaSolicitacao")
-    public ResponseEntity editarEmpresa(@RequestParam long id, @RequestBody DadosAtualizacaoSolicitacao empresa, @RequestHeader("Authorization") String token){
+    public ResponseEntity editarEmpresa(@RequestParam long id, @RequestBody DadosAtualizacaoSolicitacao empresa, @RequestHeader("Authorization") String token) {
         if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+            System.out.println(empresa.toString());
             Optional<SolicitarEstagio> solicitarEstagio = solicitacaoRepository.findById(id);
-            if(solicitarEstagio.isPresent()){
+            if (solicitarEstagio.isPresent()) {
                 solicitarEstagio.get().setNomeEmpresa(empresa.nomeEmpresa());
                 solicitarEstagio.get().setAgente(empresa.agente());
                 solicitarEstagio.get().setContatoEmpresa(empresa.contatoEmpresa());
-                solicitarEstagio.get().setEPrivada(empresa.ePrivada());
+                solicitarEstagio.get().setEPrivada(empresa.eprivada());
+                solicitarEstagio.get().setCargaHoraria(empresa.cargaHoraria());
+                solicitarEstagio.get().setSalario(empresa.salario());
+                solicitarEstagio.get().setTurnoEstagio(empresa.turnoEstagio());
+
                 solicitacaoRepository.save(solicitarEstagio.get());
                 return ResponseEntity.ok().build();
             }
@@ -91,7 +108,6 @@ public class SolicitacaoController extends BaseController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-
     @GetMapping("/editarstatus")
     public ResponseEntity setSolicitacao(@RequestParam long id, @RequestParam String status, @RequestHeader("Authorization") String token) {
         Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(tokenService.getSubject(token.replace("Bearer ", "")));
@@ -99,20 +115,17 @@ public class SolicitacaoController extends BaseController {
         return ResponseEntity.ok().build();
     }
 
-    //?Verificar se a edição da etapa reseta os status da etapa no coordenador e diretor.
     @GetMapping("/editarEtapa")
     public ResponseEntity setEtapa(@RequestParam long id, @RequestParam String etapa, @RequestHeader("Authorization") String token) {
-        if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
-            System.out.println(etapa);
-            if(etapa.equalsIgnoreCase("5")){
-                solicitacaoRepository.atualizarEtapa(id, etapa , "Deferido");
-            }
-            else {
-                solicitacaoRepository.atualizarEtapa(id, etapa, "Em andamento");
-            }
-            return ResponseEntity.ok().build();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Usuario userDetails = (Usuario) authentication.getPrincipal();
+        String email = userDetails.getEmail();
+        UserDetails usuario = usuarioRepository.findByEmail(email);
+        if (usuarioRepository.findByEmailAndNotRoleId1(email).isPresent()) {
+            return solicitacaoService.editarEtapa(id, etapa, userDetails.getRoles().getId());
+        }else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     @GetMapping("/dadosSolicitacaoAluno")
@@ -131,12 +144,24 @@ public class SolicitacaoController extends BaseController {
                 : ResponseEntity.ok(solicitacoes);
     }
 
+    @GetMapping("/adicionarRespostaSolicitacao")
+    public ResponseEntity adicionarResposta(@RequestParam long id, @RequestParam String resposta, @RequestHeader("Authorization") String token) {
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        if (usuarioRepository.findByEmailAndNotRoleId1(email).isPresent()) {
+            historicoSolicitacao.salvarHistoricoSolicitacaoId(id, usuarioRepository.findRoleIdByEmail(email), "Aluno resolveu a pendência.");
+            solicitacaoRepository.atualizarResposta(id, resposta);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+
     @GetMapping("/listarSolicitacoesPorEmailServidor")
     public ResponseEntity<List<DadosListagemSolicitacaoServidor>> listarSolicitacoesPorEmailServidor(@RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
-        if(servidor == null){
-            return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (servidor == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         List<SolicitarEstagio> publisolicitacoes = solicitacaoService.obterSolicitacoesDoServidor(servidor);
@@ -147,18 +172,22 @@ public class SolicitacaoController extends BaseController {
     }
 
     @GetMapping("/alunoSolicitacao/{id}")
-    public ResponseEntity<DadosListagemSolicitacaoAluno> getAlunoSolicitacao(@PathVariable("id") Long id , @RequestHeader("Authorization") String token) {
+    public ResponseEntity<DadosListagemSolicitacaoAluno> getAlunoSolicitacao(@PathVariable("id") Long id, @RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
-        if(servidor == null){
-            return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (servidor == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         if (solicitacao.isPresent()) {
             DadosListagemSolicitacaoAluno dadosSolicitacao = new DadosListagemSolicitacaoAluno(solicitacao.get());
             if (solicitacao.get().getStatus().equals("Nova")) {
-                solicitacao.get().setStatus("Em andamento");
+                solicitacao.get().setStatus("Em análise");
                 solicitacao.get().setEtapa("2");
+                solicitacao.get().setEditavel(false);
+                solicitacaoRepository.save(solicitacao.get());
+            } if(solicitacao.get().getStatus().equalsIgnoreCase("respondido")){
+                solicitacao.get().setStatus("Em análise");
                 solicitacao.get().setEditavel(false);
                 solicitacaoRepository.save(solicitacao.get());
             }
@@ -170,11 +199,11 @@ public class SolicitacaoController extends BaseController {
 
 
     @GetMapping("/trocarValidadeContrato")
-    public ResponseEntity trocarDataContrato(@RequestParam Long id, @RequestParam String dataFinalNova, @RequestParam String dataInicioNova , @RequestHeader("Authorization") String token) {
+    public ResponseEntity trocarDataContrato(@RequestParam Long id, @RequestParam String dataFinalNova, @RequestParam String dataInicioNova, @RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
-        if(servidor == null){
-            return  ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (servidor == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
@@ -187,7 +216,6 @@ public class SolicitacaoController extends BaseController {
             return ResponseEntity.notFound().build();
         }
     }
-
 
     @GetMapping("/solicitacao/{id}")
     public ResponseEntity<DadosAtualizacaoSolicitacao> getSolicitacaoById(@PathVariable("id") Long id) {
@@ -202,6 +230,7 @@ public class SolicitacaoController extends BaseController {
                     , solicitacao.isEditavel()
                     , solicitacao.getStatusEtapaDiretor()
                     , solicitacao.getObservacao());
+
             return ResponseEntity.ok(solicitacaoDTO);
         } else {
             return ResponseEntity.notFound().build();
@@ -220,16 +249,15 @@ public class SolicitacaoController extends BaseController {
                                                           @RequestPart("dados") DadosAtualizacaoSolicitacao dados,
                                                           @RequestParam(value = "file", required = false) List<MultipartFile> files,
                                                           @RequestHeader("Authorization") String token) {
-        //Verificar se é servidor  e se a solicitação existe
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(email);
         Optional<SolicitarEstagio> solicitacaoOptional = solicitacaoRepository.findById(id);
-        if (!solicitacaoOptional.isPresent() || servidor == null) {
+        if (solicitacaoOptional.isEmpty() || servidor == null) {
             return ResponseEntity.notFound().build();
         }
-        return solicitacaoService.deferirSolicitacao(solicitacaoOptional.get(),servidor,files);
-    }
 
+        return solicitacaoService.deferirSolicitacao(solicitacaoOptional.get(), servidor, files);
+    }
 
     @PutMapping("/indeferirSolicitacao/{id}")
     @Transactional
@@ -239,7 +267,38 @@ public class SolicitacaoController extends BaseController {
         if (servidor.getRole().getId() == 1) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Você não tem permissão para indeferir essa solicitação.");
         }
-        return solicitacaoService.indeferirSolicitacao(id,servidor,dados);
+        return solicitacaoService.indeferirSolicitacao(id, servidor, dados);
     }
 
+    @PostMapping("/salvarRelatorioFinal")
+    public ResponseEntity salvarRelatorioFinal(@RequestPart String id, @RequestParam("file") List<MultipartFile> arquivos, @RequestHeader("Authorization") String token) {
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        Aluno aluno = alunoRepository.findByUsuarioSistemaEmail(email);
+        if (aluno == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        SolicitarEstagio solicitacao = solicitacaoRepository.findById(Long.parseLong(id)).get();
+        if (solicitacao.getAluno().getId() != aluno.getId()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if(solicitacao.isRelatorioEntregue()){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Relatório final já foi entregue.");
+        }
+        return solicitacaoService.salvarRelatorioFinal(solicitacao, arquivos);
+    }
+
+    @PostMapping("/cancelarEstagio")
+    public ResponseEntity cancelarEstagio(@RequestParam long id, @RequestParam("file") List<MultipartFile> arquivos, @RequestHeader("Authorization") String token) {
+        String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        Aluno aluno = alunoRepository.findByUsuarioSistemaEmail(email);
+        if (aluno == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        SolicitarEstagio solicitacao = solicitacaoRepository.findById(id).get();
+        if (solicitacao.getAluno().getId() != aluno.getId()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return solicitacaoService.cancelarEstagio(solicitacao, arquivos);
+    }
 }

@@ -28,12 +28,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.http.WebSocket;
 import java.util.Objects;
 import java.util.Optional;
 
 
 @RestController
 @RequestMapping("/login")
+@CrossOrigin(origins = "*")
 public class AutenticacaoController extends BaseController {
     @Autowired
     private ConfigProperties configProperties;
@@ -47,19 +49,20 @@ public class AutenticacaoController extends BaseController {
     //Service para cadastro?
     @PostMapping
     public ResponseEntity efetuarLogin(@RequestBody @Valid DadosAutenticacao dados){
-        System.out.println("BATATA "+ configProperties.getTeste());
-        Usuario role =(Usuario) usuarioRepository.findByEmail(dados.email());
+        Usuario role = (Usuario) usuarioRepository.findByEmail(dados.email());
         var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(),dados.senha());
         var authenticacao = manager.authenticate(authenticationToken);
         var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());
         Autenticacao response = new Autenticacao(tokenJWT,role.getRoles().getName());
+        System.out.println(role.getEmail());
         return ResponseEntity.ok(response);
     }
+
+
 
     @PostMapping("/recuperarSenha")
     public ResponseEntity recuperarSenha(@RequestBody String email){
         if(usuarioRepository.existsByEmail(email)){
-
             var tokenJWT = new Token(tokenService.gerarTokenTempo(email,10));
             tokenRepository.save(tokenJWT);
             try {
@@ -70,7 +73,7 @@ public class AutenticacaoController extends BaseController {
                                 <p>Olá,</p>
                                 <p>Seu token para a recuperação de senha se encontra abaixo:</p>
                                  <p style='background-color: #ecf0f1; padding: 10px; font-size: 18px; font-weight: bold;'>""" + tokenJWT.getToken() +  "</p>" + """ 
-                                <p>Utilize o token no sistema para recuperar a senha em até 10 minutos.</p>
+                                <p>Utilize o token no sistema para efetuar o cadastro de uma nova senha em até 10 minutos.</p>
                             </body>
                         </html>""");
                 return ResponseEntity.ok().build();
@@ -85,7 +88,6 @@ public class AutenticacaoController extends BaseController {
     public ResponseEntity validarToken(@RequestBody String token){
         String email = this.tokenService.getSubject(token);
         if(email != null){
-            System.out.println("SUCESSO TOKEN VERIFICADO!");
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.badRequest().build();
@@ -96,16 +98,12 @@ public class AutenticacaoController extends BaseController {
         String email = this.tokenService.getSubject(token);
         Optional<Usuario> user = usuarioRepository.findByEmailUser(email);
         if(user.isPresent()){
-            System.out.println("SENHA ANTIGA: " + user.get().getSenha());
             user.get().setSenha(new BCryptPasswordEncoder().encode(senha));
-            System.out.println("SENHA NOVA: " + user.get().getSenha());
             usuarioRepository.save(user.get());
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
     }
-
-
 
     @PostMapping("/google")
     public ResponseEntity efetuarLoginGoogle(@RequestBody String token){
@@ -117,7 +115,8 @@ public class AutenticacaoController extends BaseController {
                 Autenticacao response = new Autenticacao(tokenJWT, role.getRoles().getName());
                 return ResponseEntity.ok(response);
             }
-            else {
+            else
+            {
                 Optional<Role> roles = roleRepository.findById(1L);
                 var aluno = new Aluno(dados, roles.get());
                 if (usuarioRepository.findByEmail(dados.email()) != null) {

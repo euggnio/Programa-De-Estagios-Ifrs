@@ -38,11 +38,13 @@ public class SecurityConfigurations {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and().authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST,"/login").permitAll()
+                .requestMatchers(HttpMethod.POST,"/teste").permitAll()
                 .requestMatchers(HttpMethod.POST,"/login/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/login/recuperarSenha").permitAll()
                 .requestMatchers(HttpMethod.POST, "/login/validarToken").permitAll()
                 .requestMatchers(HttpMethod.POST, "/login/trocarSenha/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/cadastrarAluno").permitAll()
+                .requestMatchers(HttpMethod.POST,"/cadastrarAlunos").permitAll()
                 .requestMatchers(HttpMethod.GET,"/listarVagas").permitAll()
                 .requestMatchers("/assinaturaapi/alunos/**").hasRole("ALUNO")
                 .requestMatchers("/assinaturaapi/servidores/**").hasRole("SERVIDOR")
@@ -51,7 +53,6 @@ public class SecurityConfigurations {
                 addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
-
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

@@ -21,17 +21,13 @@ public class Servidor {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-
 	private String nome;
 	private String cargo;
-
 	@OneToOne
 	private Curso curso;
-
 	@OneToOne
 	@JoinColumn(name = "role_id")
 	private Role role;
-
 	@OneToOne
 	@JoinColumn(name = "usuario_sistema_id")
 	private Usuario usuarioSistema;
@@ -50,19 +46,15 @@ public class Servidor {
 		if(dados.nome() != null){
 			this.nome = dados.nome();
 		}
-
 		if(dados.usuarioSistema() != null){
 			this.usuarioSistema.atualizarInformacoes(dados.usuarioSistema());
 		}
-
 		if(dados.cargo() != null){
 			this.cargo = dados.cargo();
 		}
-
 		if(curso != null){
 			this.curso = curso;
 		}
-
 	}
 
 }

@@ -7,6 +7,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 public class ConfigProperties {
 
-    private final String teste;
+    private final String emailEstagio;
 
 }
