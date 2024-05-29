@@ -16,6 +16,8 @@ public interface ServidorRepository extends JpaRepository<Servidor, Long> {
 
     Optional<Servidor> findServidorByCurso_Id(long id);
 
+    Optional<Servidor> findServidorByUsuarioSistema(Usuario usuario);
+
     @Query(value = "SELECT * from servidores WHERE servidores.curso_id != 15 and servidores.curso_id != 16",
             nativeQuery = true)
     List<Servidor> findServidoresNotInEstagioOrDiretor();
@@ -28,8 +30,6 @@ public interface ServidorRepository extends JpaRepository<Servidor, Long> {
     public boolean existeServidorEstagio();
 
     int  countByRole_Id(long id);
-
-
 
     void deleteServidorByUsuarioSistema(Usuario usuario);
 

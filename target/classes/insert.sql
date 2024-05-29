@@ -1,28 +1,28 @@
 
-INSERT INTO curso (id, nome_curso)
-SELECT dados.id, dados.nome_curso
+INSERT INTO curso (id, nome_curso, ativo)
+SELECT dados.id, dados.nome_curso, ativo
 FROM (
-  SELECT '10' AS id, 'Análise e Desenvolvimento de Sistemas' AS nome_curso
+  SELECT '10' AS id, 'Análise e Desenvolvimento de Sistemas' AS nome_curso, '1' AS ativo
   UNION ALL
-  SELECT '11', 'Letras Português e Espanhol'
+  SELECT '11', 'Letras Português e Espanhol', '1'
   UNION ALL
-  SELECT '12', 'Eletrônica Industrial'
+  SELECT '12', 'Eletrônica Industrial', '1'
   UNION ALL
-  SELECT '13', 'Gestão Desportiva e de Lazer'
+  SELECT '13', 'Gestão Desportiva e de Lazer', '1'
   UNION ALL
-  SELECT '14', 'Processos Gerenciais'
+  SELECT '14', 'Processos Gerenciais', '1'
   UNION ALL
-  SELECT '15', 'Setor Estágio'
+  SELECT '15', 'Setor Estágio', '1'
   UNION ALL
-  SELECT '16', 'Diretor'
+  SELECT '16', 'Diretor', '1'
   UNION ALL
-  SELECT '17', 'Lazer'
+  SELECT '17', 'Lazer', '1'
   UNION ALL
-  SELECT '18', 'Informática'
+  SELECT '18', 'Informática', '1'
   UNION ALL
-  SELECT '19', 'Eletrônica'
+  SELECT '19', 'Eletrônica', '1'
   UNION ALL
-  SELECT '20', 'Guia de Turismo'
+  SELECT '20', 'Guia de Turismo', '1'
 ) AS dados
 WHERE NOT EXISTS (
   SELECT 1

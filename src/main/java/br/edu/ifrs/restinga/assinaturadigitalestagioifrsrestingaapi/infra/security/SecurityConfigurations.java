@@ -45,6 +45,7 @@ public class SecurityConfigurations {
                 .requestMatchers(HttpMethod.POST, "/login/trocarSenha/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/cadastrarAluno").permitAll()
                 .requestMatchers(HttpMethod.POST,"/cadastrarAlunos").permitAll()
+                .requestMatchers(HttpMethod.GET,"/cursos").permitAll()
                 .requestMatchers(HttpMethod.GET,"/listarVagas").permitAll()
                 .requestMatchers("/assinaturaapi/alunos/**").hasRole("ALUNO")
                 .requestMatchers("/assinaturaapi/servidores/**").hasRole("SERVIDOR")
@@ -57,7 +58,7 @@ public class SecurityConfigurations {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*")); // Aqui é onde você permite todos os domínios
+        configuration.setAllowedOrigins(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
         configuration.setExposedHeaders(Arrays.asList("x-auth-token"));

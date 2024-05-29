@@ -12,7 +12,7 @@ public record DadosAtualizacaoAluno(
 
     Long id,
     @NotBlank
-    @Length(min = 5, max = 100)
+    @Length(min = 5, max = 45)
     String nomeCompleto,
     Usuario usuarioSistema,
     String turno,

@@ -8,13 +8,13 @@ import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
+import com.google.api.services.drive.model.Permission;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
-
+import com.google.api.services.drive.Drive.Permissions.Update;
 import javax.mail.MessagingException;
 import javax.sql.rowset.serial.SerialBlob;
 import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
@@ -31,7 +31,7 @@ public class SalvarDocumentoService extends BaseController {
     private String pastaAluno;
     private final String pastaSistemaEstagios = "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah";
 
-    public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos) throws IOException, GeneralSecurityException {
+    public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos, String email) throws IOException, GeneralSecurityException {
         Drive service = GoogleUtil.createDriveService();
         String pastaCursoId = verificarExistenciaPastaCurso(service, idCurso);
         if (pastaCursoId.isEmpty()) {
@@ -39,7 +39,7 @@ public class SalvarDocumentoService extends BaseController {
         }
         System.out.println("::Pasta do curso: " + pastaCursoId);
         if (verificarExistenciaArquivo(service, idChamado, pastaCursoId)) {
-            pastaAluno = criarPastaGoogleDrive(service, idChamado, pastaCursoId);
+            pastaAluno = criarPastaGoogleDrive(service, idChamado, pastaCursoId, email);
         }
 
         for (Documento documento : documentos) {
@@ -65,7 +65,12 @@ public class SalvarDocumentoService extends BaseController {
             }
         }
     }
-    public String criarPastaGoogleDrive(Drive service, String matriculaAluno, String pastaCursoId) {
+    public String criarPastaGoogleDrive(Drive service, String matriculaAluno, String pastaCursoId, String email) {
+        Permission permission = new Permission();
+        permission.setEmailAddress(email);
+        permission.setType("user");
+        permission.setRole("reader");
+
         File fileMetadata = new File();
         fileMetadata.setName(matriculaAluno);
         fileMetadata.setMimeType("application/vnd.google-apps.folder");
@@ -74,6 +79,7 @@ public class SalvarDocumentoService extends BaseController {
             File file = service.files().create(fileMetadata)
                     .setFields("id")
                     .execute();
+            service.permissions().create(file.getId(), permission).setFields("id").execute();
             System.out.println("::PASTA no google drive criada para aluno de matricula: " + matriculaAluno);
             System.out.println("::ID da pasta: " + file.getId());
             return file.getId();
@@ -165,6 +171,6 @@ public class SalvarDocumentoService extends BaseController {
             documento.setDocumento(blob);
         List<Documento> docs = new ArrayList<>();
         docs.add(documento);
-        salvarDocumentoService.salvarDocumentoDeSolicitacao("test3", 12, docs);
+        salvarDocumentoService.salvarDocumentoDeSolicitacao("test2331", 123, docs, "euggnio@gmail.com");
     }
 }

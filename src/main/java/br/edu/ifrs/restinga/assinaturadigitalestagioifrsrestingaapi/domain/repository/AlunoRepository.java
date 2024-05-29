@@ -6,10 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface AlunoRepository extends JpaRepository<Aluno, Long> {
     Aluno findByUsuarioSistemaEmail(String email);
-
     void deleteByUsuarioSistemaEmail(String email);
     boolean existsByMatricula(String matricula);
-
     boolean existsAlunoByUsuarioSistemaEmail(String email);
 
     @Query(value = "SELECT CASE WHEN EXISTS ( SELECT 1 FROM aluno WHERE aluno.matricula = :matricula " +

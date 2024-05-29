@@ -8,9 +8,6 @@ import java.util.List;
 @Repository
 public interface DocumentoRepository extends JpaRepository<Documento, Long> {
     List<Documento> findBySolicitarEstagioId(Long solicitarEstagioId);
-
     List<Documento> findBySolicitarEstagioIdAndAssinadoTrue(Long solicitarEstagioId);
-
-    long countBySolicitarEstagioId(Long id);
 
 }

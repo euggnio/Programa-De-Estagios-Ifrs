@@ -69,7 +69,7 @@ public class ServidorImplementacao extends BaseController {
 		);
 
 		servidor.setUsuarioSistema(usuarioSistemaServidor);
-
+		historicoCursoService.salvarCadastroServidor(curso, servidor.getNome());
 		usuarioRepository.save(servidor.getUsuarioSistema());
 		servidorRepository.save(servidor);
 		var uri = uriBuilder.path("/servidor/{id}").buildAndExpand(servidor.getId()).toUri();

@@ -19,7 +19,6 @@ public class FileImp extends BaseController{
     @Transactional
     public boolean SaveDocBlob(List<MultipartFile> docs, SolicitarEstagio solicitacaoId, boolean assinado) {
         try {
-            System.out.println("Entrou no SaveDocBlob");
             for (MultipartFile doc : docs) {
                 Documento documento = new Documento();
                 byte[] bytesDocumento = doc.getBytes();
@@ -48,7 +47,7 @@ public class FileImp extends BaseController{
             Blob blobDoc = new SerialBlob(bytesDocumento);
             documento.setNome("RELATORIO_FINAL_" +doc.getOriginalFilename());
             documento.setDocumento(blobDoc);
-            documento.setAssinado(false);
+            documento.setAssinado(true);
             documento.setSolicitarEstagio(solicitacaoId);
             documentoRepository.save(documento);
             return documento;

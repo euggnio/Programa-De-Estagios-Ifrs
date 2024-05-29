@@ -38,9 +38,7 @@ public class Servidor {
 		this.usuarioSistema = dados.usuarioSistema();
 		this.curso = curso;
 		this.role = role;
-
 	}
-
 
     public void atualizarInformacoes(DadoUpdateServidor dados, Curso curso) {
 		if(dados.nome() != null){
@@ -56,5 +54,4 @@ public class Servidor {
 			this.curso = curso;
 		}
 	}
-
 }

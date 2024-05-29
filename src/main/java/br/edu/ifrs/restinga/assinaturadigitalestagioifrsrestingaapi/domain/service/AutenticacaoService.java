@@ -20,14 +20,8 @@ public class AutenticacaoService implements UserDetailsService {
     @Autowired 
     private TokenService tokenService;
 
-
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return repository.findByEmail(email);
-    }
-    
-    public Servidor obterServidorPorToken(String token){
-        String email = tokenService.getSubject(token.replace("Bearer ", ""));
-        return servidorRepository.findByUsuarioSistemaEmail(email);
     }
 }

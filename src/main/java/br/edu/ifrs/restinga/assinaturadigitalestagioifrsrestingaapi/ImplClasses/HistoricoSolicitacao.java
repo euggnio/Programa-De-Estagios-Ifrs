@@ -34,6 +34,7 @@ public class HistoricoSolicitacao {
     @Transactional
     public void salvarHistoricoSolicitacaoId(Long solicitarEstagio,long servidorRole, String situacao){
         solicitacaoRepository.findById(solicitarEstagio).ifPresent(solicitarEstagio1 -> {
+
             Historico log = new Historico(LocalDateTime.now(),getEtapa(servidorRole),situacao,solicitarEstagio1);
             historicoSolicitacaoRepository.save(log);
         });

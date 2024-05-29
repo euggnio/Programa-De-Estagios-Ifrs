@@ -1,7 +1,9 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
 
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.HistoricoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.DocumentoRepository;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.HistoricoSolicitacaoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.SolicitacaoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.DocumentoService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.service.SalvarDocumentoService;
@@ -39,6 +41,9 @@ public class DocumentoController {
     DocumentoService documentoService;
     @Autowired
     TokenService tokenService;
+
+
+
 
     @PostMapping("/salvarDocumento")
     @ResponseBody

@@ -24,7 +24,7 @@ public class DocumentoService extends BaseController {
     @Transactional
     public ResponseEntity salvarDocumentosSolicitacao(SolicitarEstagio solicitacao, List<MultipartFile> documentos, String solicitante){
         if(servidorRepository.existsServidorByUsuarioSistemaEmail(solicitante)){
-            historicoSolicitacao.mudarSolicitacao(solicitacao,"Adicionou um total de " + documentos.size() + " documentos");
+            historicoSolicitacao.mudarSolicitacao(solicitacao,"Adicionado um total de " + documentos.size() + " documentos");
             fileImp.SaveDocBlob(documentos,solicitacao,true);
             return ResponseEntity.ok().build();
         }
@@ -34,7 +34,7 @@ public class DocumentoService extends BaseController {
                 if(documentos.size() >= 2){
                     String nomesDocumentos = documentos.stream()
                             .map(MultipartFile::getOriginalFilename)
-                            .map(nome -> "<br>  ->> " + nome + "")
+                            .map(nome -> "<br>  ->> " + nome)
                             .reduce((a, b) -> a + ", " + b)
                             .orElse("");
 
@@ -48,7 +48,7 @@ public class DocumentoService extends BaseController {
     }
 
     private void solucionarPendente(SolicitarEstagio solicitacao){
-        if(solicitacao.getStatus().equalsIgnoreCase("pendente")){
+        if(solicitacao.isEditavel() && !solicitacao.getStatus().equalsIgnoreCase("nova")){
             solicitacao.setStatus("Respondido");
             solicitacaoRepository.save(solicitacao);
         }

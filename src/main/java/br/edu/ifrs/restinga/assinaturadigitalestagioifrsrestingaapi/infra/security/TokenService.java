@@ -74,8 +74,11 @@ public class TokenService {
             return false;
         }
         String role = this.getRole(token);
-        return role.toLowerCase().contains("servidor") || role.toLowerCase().contains("sestagio");
+        return role.toLowerCase().contains("servidor")
+                || role.toLowerCase().contains("sestagio")
+                || role.toLowerCase().contains("diretor");
     }
+
 
     public  boolean isAluno(String token){
         if(token == null || token.isEmpty()){

@@ -2,6 +2,8 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDate;
 public record DadosCadastroSolicitacao(
@@ -14,12 +16,15 @@ public record DadosCadastroSolicitacao(
         @NotBlank
         String titulo,
         @NotBlank
+        @Length(min = 3, max = 48)
         String nomeEmpresa,
-        @NotBlank
+        @NotNull
         Boolean ePrivada,
         @NotBlank
+        @Length(min = 11, max = 11)
         String contatoEmpresa,
         @NotBlank
+        @Length(min = 1, max = 25)
         String agente,
 
         @Nullable

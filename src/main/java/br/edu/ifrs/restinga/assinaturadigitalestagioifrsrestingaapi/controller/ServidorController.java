@@ -6,9 +6,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadoUpda
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroServidor;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.TratadorDeErros;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.security.TokenService;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Curso;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Servidor;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuario;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -82,6 +80,8 @@ public class ServidorController extends BaseController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Não é possível excluir o único servidor de estágio");
                 }
             }
+            Optional<Servidor> servidor = servidorRepository.findServidorByUsuarioSistema(user.get());
+            servidor.ifPresent(value -> historicoCursoService.salvarDesligamentoServidor(value.getCurso(), value.getNome()));
             servidorRepository.deleteServidorByUsuarioSistema(user.get());
             usuarioRepository.deleteById(id);
             return ResponseEntity.ok().build();
@@ -102,6 +102,16 @@ public class ServidorController extends BaseController {
         }
         Usuario user = usuarioRepository.findUsuarioByEmail(email);
         if (user != null) {
+            if(user.getRoles().getId() == 1){
+                List<SolicitarEstagio> solicitacao = solicitacaoRepository.findAllByAluno_UsuarioSistema(user);
+                for (SolicitarEstagio solicitarEstagio : solicitacao) {
+                    estagiariosRepository.deleteBySolicitacaoId(solicitarEstagio.getId());
+                }
+                solicitacaoRepository.deleteAllByAluno_UsuarioSistema(user);
+            }
+            Optional<Servidor> servidor = servidorRepository.findServidorByUsuarioSistema(user);
+            servidor.ifPresent(value -> historicoCursoService.salvarDesligamentoServidor(value.getCurso(), value.getNome()));
+
             alunoRepository.deleteByUsuarioSistemaEmail(email);
             servidorRepository.deleteServidorByUsuarioSistema(user);
             usuarioRepository.deleteById(user.getId());
@@ -140,4 +150,12 @@ public class ServidorController extends BaseController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @GetMapping("/pegarHistoricoServidores")
+    public ResponseEntity pegarHistoricoServidores() {
+        List<HistoricoCurso> historicoCursos = historicoCursoService.retornarHistoricoCurso();
+        System.out.println(historicoCursos.get(0).getCurso().getNomeCurso());
+        return ResponseEntity.ok().body(historicoCursos);
+    }
+
 }

@@ -16,7 +16,6 @@ public interface EstagiariosRepository extends JpaRepository<Estagiarios, Long> 
     @Query(value = "SELECT * FROM estagiarios LIMIT 20 OFFSET :pagina", nativeQuery = true)
     List<Estagiarios> pegarPagina(int pagina);
 
-    //SELECT * FROM `estagiarios` e INNER JOIN `solicitar_estagio`  ON e.solicitacao_id = solicitar_estagio.id WHERE solicitar_estagio.final_data_estagio > NOW() AND solicitar_estagio.aluno_id = 2;
     @Query(value = "SELECT e.* FROM `estagiarios` e INNER JOIN `solicitar_estagio` se ON e.solicitacao_id = se.id WHERE e.ativo = true and se.final_data_estagio > NOW() AND se.aluno_id = :id", nativeQuery = true)
     List<Estagiarios> pegarEstagioPorAluno(Long id);
 
@@ -24,10 +23,7 @@ public interface EstagiariosRepository extends JpaRepository<Estagiarios, Long> 
     List<Estagiarios> findByAlunoMatricula(String matricula);
 
     Estagiarios findBySolicitacaoId(Long id);
-    @Transactional
-    @Modifying
-    @Query(value = "UPDATE estagiarios SET ativo = :ativo WHERE solicitacao_id = :id", nativeQuery = true)
-    void updateAtivo(Long id, Boolean ativo);
+    void deleteBySolicitacaoId(Long id);
 
     Boolean existsBySolicitacaoId(Long id);
 

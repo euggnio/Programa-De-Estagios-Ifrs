@@ -1,5 +1,6 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model;
 
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoSolicitacao;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -24,17 +25,13 @@ public class SolicitarEstagio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     private String tipo;
-
     @OneToMany(mappedBy = "solicitarEstagio", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JsonIgnore
     private List<Documento> documento = new ArrayList<>();
-
     @OneToOne
     private Aluno aluno;
-
     @Length(max = 25)
     private String status;
-
     private String statusEtapaCoordenador;
     private String statusSetorEstagio;
     private String statusEtapaDiretor;
@@ -42,7 +39,7 @@ public class SolicitarEstagio {
     @OneToOne
     Curso curso;
 
-    @OneToMany(mappedBy = "solicitarEstagio", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @OneToMany(mappedBy = "solicitarEstagio", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Historico> historico = new ArrayList<>();
 
@@ -66,13 +63,12 @@ public class SolicitarEstagio {
     @Length(max = 2)
     private String etapa;
 
-    private boolean editavel;
-
     private String observacao;
 
     private String resposta;
 
-    private Long idReferente;
+
+
 
     private String cargaHoraria;
 
@@ -81,6 +77,11 @@ public class SolicitarEstagio {
     private String turnoEstagio;
 
     private boolean relatorioEntregue;
+
+    private boolean cancelamento;
+
+    private boolean editavel;
+
     public SolicitarEstagio(LocalDate finalDataEstagio,LocalDate inicioDataEstagio, Aluno aluno, Curso curso
             , String tipo,  String nomeEmpresa,Boolean ePrivada,String contatoEmpresa, String agente
             , String observacao, String status, String etapa, boolean editavel
@@ -95,7 +96,7 @@ public class SolicitarEstagio {
         this.etapa = etapa;
         this.observacao = observacao;
         this.nomeEmpresa = nomeEmpresa;
-        this.ePrivada = ePrivada;
+        this.ePrivada = ePrivada == null  ? false : ePrivada ;
         this.contatoEmpresa = contatoEmpresa;
         this.agente = agente;
         this.editavel = editavel;
@@ -106,6 +107,8 @@ public class SolicitarEstagio {
         this.statusSetorEstagio = "";
         this.statusEtapaDiretor = "";
         this.relatorioEntregue = false;
+        this.cancelamento = false;
+
     }
 
     public String getEtapaAtualComoString(){
@@ -128,6 +131,12 @@ public class SolicitarEstagio {
         }
     }
 
+    public void setAprovado(){
+        this.status = "Aprovado";
+        this.observacao = "";
+        this.setEditavel(false);
+    }
+
     public String verificarEtapaComoString(String etapa){
         switch (etapa) {
             case "1" -> {
@@ -146,7 +155,27 @@ public class SolicitarEstagio {
                 return "Erro";
             }
         }
+    }
 
+    public void atualizarDadosEmpresa(DadosAtualizacaoSolicitacao empresa){
+        this.setNomeEmpresa(empresa.nomeEmpresa());
+        this.setAgente(empresa.agente());
+        this.setContatoEmpresa(empresa.contatoEmpresa());
+        if(empresa.eprivada() == null) {
+            this.setEPrivada(false);
+        }
+        this.setCargaHoraria(empresa.cargaHoraria());
+        this.setSalario(empresa.salario());
+        this.setTurnoEstagio(empresa.turnoEstagio());
+    }
+
+
+    public boolean isRespondido(){
+        return this.getStatus().equalsIgnoreCase("respondido");
+    }
+
+    public boolean isNova(){
+        return this.getStatus().equalsIgnoreCase("nova");
     }
 
 }

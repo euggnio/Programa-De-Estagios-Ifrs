@@ -12,7 +12,7 @@ import jakarta.annotation.Nullable;
 import javax.validation.constraints.Null;
 
 public record DadosListagemSolicitacaoAluno(Long id, String status, String tipo,
-                                            String etapa, boolean editavel, String observacao,
+                                            String etapa, boolean editavel, boolean cancelamento, String observacao,
                                             LocalDateTime dataSolicitacao, Aluno aluno, List<Historico> historico,
                                             LocalDate finalDataEstagio, LocalDate inicioDataEstagio, String agente,
                                             String nomeEmpresa, String contatoEmpresa, boolean ePrivada
@@ -24,6 +24,7 @@ public record DadosListagemSolicitacaoAluno(Long id, String status, String tipo,
                 , solicitarEstagio.getTipo()
                 , solicitarEstagio.getEtapa()
                 , solicitarEstagio.isEditavel()
+                , solicitarEstagio.isCancelamento()
                 , solicitarEstagio.getObservacao()
                 , solicitarEstagio.getDataSolicitacao()
                 , solicitarEstagio.getAluno()

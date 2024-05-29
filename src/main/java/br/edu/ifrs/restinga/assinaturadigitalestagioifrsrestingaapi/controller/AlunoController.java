@@ -35,6 +35,9 @@ public class AlunoController extends BaseController {
         if (usuarioRepository.findByEmail(dados.usuarioSistema().getEmail()) != null) {
             return TratadorDeErros.tratarErro409("email");
         }
+        if(alunoRepository.existsByMatricula(aluno.getMatricula())){
+            return TratadorDeErros.tratarErro409("matricula");
+            }
          if (!emailValidator.validaEmail(aluno.getUsuarioSistema().getEmail())) {
              return TratadorDeErros.tratarErro400(HttpStatus.BAD_REQUEST);
         }

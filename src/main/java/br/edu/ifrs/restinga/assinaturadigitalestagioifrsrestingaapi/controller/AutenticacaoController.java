@@ -50,10 +50,20 @@ public class AutenticacaoController extends BaseController {
     @PostMapping
     public ResponseEntity efetuarLogin(@RequestBody @Valid DadosAutenticacao dados){
         Usuario role = (Usuario) usuarioRepository.findByEmail(dados.email());
+        String nomeUsuario;
+        if(role == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if(role.getRoles().getId() != 1){
+            nomeUsuario = servidorRepository.findByUsuarioSistemaEmail(role.getEmail()).getNome();
+        }
+        else{
+            nomeUsuario = alunoRepository.findByUsuarioSistemaEmail(role.getEmail()).getNomeCompleto();
+        }
         var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(),dados.senha());
         var authenticacao = manager.authenticate(authenticationToken);
         var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());
-        Autenticacao response = new Autenticacao(tokenJWT,role.getRoles().getName());
+        Autenticacao response = new Autenticacao(tokenJWT,role.getRoles().getName(), nomeUsuario);
         System.out.println(role.getEmail());
         return ResponseEntity.ok(response);
     }
@@ -110,9 +120,11 @@ public class AutenticacaoController extends BaseController {
         DadosAutenticacaoGoogle dados = GoogleUtil.verificarToken(token);
         if(Objects.nonNull(dados)) {
             if (usuarioRepository.existsByEmail(dados.email())) {
+                System.out.println(dados.email());
                 Usuario role = (Usuario) usuarioRepository.findByEmail(dados.email());
-                var tokenJWT = tokenService.gerarTokenTempo(dados.email(), 120);
-                Autenticacao response = new Autenticacao(tokenJWT, role.getRoles().getName());
+                var tokenJWT = tokenService.gerarToken(role);
+                System.out.println(role.getRoles().getName());
+                Autenticacao response = new Autenticacao(tokenJWT, role.getRoles().getName(), role.getEmail());
                 return ResponseEntity.ok(response);
             }
             else
@@ -133,7 +145,7 @@ public class AutenticacaoController extends BaseController {
                 var authenticationToken = new UsernamePasswordAuthenticationToken(dados.email(), dados.sub());
                 var authenticacao = manager.authenticate(authenticationToken);
                 var tokenJWT = tokenService.gerarToken((Usuario) authenticacao.getPrincipal());
-                Autenticacao response = new Autenticacao(tokenJWT, aluno.getRole().getName());
+                Autenticacao response = new Autenticacao(tokenJWT, aluno.getRole().getName(), aluno.getNomeCompleto());
                 return ResponseEntity.ok(response);
             }
         }

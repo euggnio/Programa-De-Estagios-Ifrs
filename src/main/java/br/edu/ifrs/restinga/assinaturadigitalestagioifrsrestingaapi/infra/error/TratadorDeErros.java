@@ -42,9 +42,11 @@ public class TratadorDeErros {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("O email informado já está cadastrado no sistema!");
         }
         else if(conflito.equals("curso")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Já possui um servidor para esse curso!!!");
-        }
-        else{
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Já possui um servidor para esse curso! Desbloqueie o email atual para cadastrar um novo.");
+        } else if (conflito.equals("matricula")){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Já existe um aluno cadastrado com essa matrícula!");
+
+        } else{
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Houve algum conflito no banco de dados, tente novamente.");
         }
     }

@@ -17,7 +17,7 @@ public class Estagiarios {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private SolicitarEstagio solicitacao;
     private String urlPastaDocumentos;
     private boolean ativo;
