@@ -10,10 +10,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleU
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.ConfigProperties;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.TratadorDeErros;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.security.TokenService;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Role;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Token;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuario;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import jakarta.validation.Valid;
 
@@ -41,8 +38,7 @@ public class AutenticacaoController extends BaseController {
     private ConfigProperties configProperties;
     @Autowired
     private AuthenticationManager manager;
-    @Autowired
-    private TokenService tokenService;
+
     @Autowired
     private TokenRepository tokenRepository;
 
@@ -50,12 +46,15 @@ public class AutenticacaoController extends BaseController {
     @PostMapping
     public ResponseEntity efetuarLogin(@RequestBody @Valid DadosAutenticacao dados){
         Usuario role = (Usuario) usuarioRepository.findByEmail(dados.email());
-        String nomeUsuario;
+        String nomeUsuario = "";
         if(role == null){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         if(role.getRoles().getId() != 1){
-            nomeUsuario = servidorRepository.findByUsuarioSistemaEmail(role.getEmail()).getNome();
+           Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(role.getEmail());
+            if(servidor == null){
+                nomeUsuario = "Servidor";
+            }
         }
         else{
             nomeUsuario = alunoRepository.findByUsuarioSistemaEmail(role.getEmail()).getNomeCompleto();

@@ -28,7 +28,7 @@ public class TokenService {
             return JWT.create()
                     .withIssuer("API ASSINATURA.EST.IFRS")
                     .withSubject(usuario.getEmail())
-                    .withExpiresAt(dataExpiracao())
+                    .withExpiresAt(LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00")))
                     .withClaim("role",usuario.getRoles().getName())
                     .sign(algoritimo);
 
@@ -43,7 +43,7 @@ public class TokenService {
             return JWT.create()
                     .withIssuer("API ASSINATURA.EST.IFRS")
                     .withSubject(email)
-                    .withExpiresAt(tempoExpiracao(minutos))
+                    .withExpiresAt(LocalDateTime.now().plusMinutes(minutos).toInstant(ZoneOffset.of("-03:00")))
                     .sign(algoritimo);
         } catch (JWTCreationException exception){
             throw  new RuntimeException("erro ao gerar token jwt",exception);
@@ -88,11 +88,5 @@ public class TokenService {
         return role.toLowerCase().contains("aluno");
     }
 
-    private Instant dataExpiracao() {
-        return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));
-    }
 
-    private Instant tempoExpiracao(long minutos) {
-        return LocalDateTime.now().plusMinutes(minutos).toInstant(ZoneOffset.of("-03:00"));
-    }
 }

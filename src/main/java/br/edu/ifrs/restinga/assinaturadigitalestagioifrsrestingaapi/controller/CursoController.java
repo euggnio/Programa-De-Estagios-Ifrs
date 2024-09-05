@@ -63,14 +63,16 @@ public class CursoController {
     }
 
     @DeleteMapping("/deletarCurso")
-    public ResponseEntity deletarCurso(@RequestParam long curso, @RequestHeader("Authorization") String token){
+    public ResponseEntity deletarCurso(@RequestParam String curso, @RequestHeader("Authorization") String token){
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
+        System.out.println("::" + curso);
         if(servidorRepository.existsServidorByUsuarioSistemaEmail(email)) {
-            if(cursoRepository.findById(curso).isPresent()) {
-                return ResponseEntity.badRequest().build();
+            Optional<Curso> cursoDelete = cursoRepository.findById(Long.valueOf(curso));
+            if(cursoDelete.isPresent()) {
+                cursoRepository.delete(cursoDelete.get());
+                return ResponseEntity.ok().build();
             }
-            cursoRepository.deleteById(curso);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.badRequest().build();
         }
         else{
             return ResponseEntity.status(403).build();

@@ -63,12 +63,11 @@ WHERE NOT EXISTS (
 
 
 INSERT INTO servidores (cargo, nome, curso_id, role_id, usuario_sistema_id)
-SELECT 'Setor estágio' AS cargo, 'admin' AS nome, 15 AS curso_id, 3 AS role_id, 1 AS usuario_sistema_id
-FROM dual
-WHERE NOT EXISTS (
+SELECT 'Setor estágio' AS cargo, 'admin' AS nome, 15 AS curso_id, 3 AS role_id, usuarios.id AS usuario_sistema_id
+FROM usuarios
+WHERE usuarios.email = 'admin@restinga.ifrs.edu.br'
+  AND NOT EXISTS (
     SELECT 1
     FROM servidores
-    WHERE
-          servidores.cargo = 'Setor estágio'
-      AND servidores.nome = 'admin'
+    WHERE servidores.nome = 'admin'
 );

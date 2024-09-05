@@ -27,9 +27,6 @@ public class SolicitacaoService extends BaseController {
     FileImp fileImp;
 
     @Autowired
-    private HistoricoSolicitacao historicoSolicitacao;
-
-    @Autowired
     private SalvarDocumentoService salvarDocumentoService;
 
     @Autowired
@@ -198,9 +195,7 @@ public class SolicitacaoService extends BaseController {
     }
 
 
-    //TODO: Refatorar o email e drive
-
-
+    //TODO: Refatorar o email e drive para caso conexão esteja offline
     private void deferirSetorEstagio(SolicitarEstagio solicitacao){
             try{
             EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
@@ -291,7 +286,7 @@ public class SolicitacaoService extends BaseController {
         solicitacaoRepository.save(solicitacao);
     }
 
-    public void salvarArquivos(List<MultipartFile> docs, SolicitarEstagio solicitarEstagio){
+    private void salvarArquivos(List<MultipartFile> docs, SolicitarEstagio solicitarEstagio){
         if(docs != null && !docs.isEmpty() ){
             fileImp.SaveDocBlob(docs,solicitarEstagio,true);
         }
@@ -361,7 +356,7 @@ public class SolicitacaoService extends BaseController {
             historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), 1, "Relatório final foi adicionado pelo aluno");
             System.out.println(arquivos.size() + " Tamanho");
             System.out.println(arquivos.get(0).getOriginalFilename() + " Nome");
-            fileImp.criarRelatorioFinal(arquivos.get(0),solicitacao);
+            fileImp.CriarRelatorioFinal(arquivos.get(0),solicitacao);
             solicitacao.setStatus("Em análise");
             solicitacao.setEtapa("2");
             solicitacao.setCancelamento(false);

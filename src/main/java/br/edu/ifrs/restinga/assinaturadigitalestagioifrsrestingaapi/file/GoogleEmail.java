@@ -51,21 +51,17 @@ public class GoogleEmail {
         email.addRecipient(TO, new InternetAddress(paraEmail));
         email.setSubject(subject);
         email.setText(message);
-
         MimeBodyPart mimeBodyPart = new MimeBodyPart();
         mimeBodyPart.setContent(htmlBody, "text/html");
-
         Multipart multipart = new MimeMultipart();
         multipart.addBodyPart(mimeBodyPart);
         email.setContent(multipart);
-
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         email.writeTo(buffer);
         byte[] rawMessageBytes = buffer.toByteArray();
         String encodedEmail = Base64.encodeBase64URLSafeString(rawMessageBytes);
         Message msg = new Message();
         msg.setRaw(encodedEmail);
-
             msg = service.users().messages().send("me", msg).execute();
             System.out.println("Message id: " + msg.getId());
             System.out.println(msg.toPrettyString());

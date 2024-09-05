@@ -40,7 +40,7 @@ public class FileImp extends BaseController{
         }
     }
 
-    public Documento criarRelatorioFinal(MultipartFile doc, SolicitarEstagio solicitacaoId) {
+    public Documento CriarRelatorioFinal(MultipartFile doc, SolicitarEstagio solicitacaoId) {
         try {
             Documento documento = new Documento();
             byte[] bytesDocumento = doc.getBytes();

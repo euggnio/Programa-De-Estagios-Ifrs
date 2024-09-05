@@ -11,7 +11,6 @@ import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.Permission;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
-import com.google.api.services.drive.Drive.Permissions.Update;
 import javax.mail.MessagingException;
 import javax.sql.rowset.serial.SerialBlob;
 import java.io.ByteArrayInputStream;
@@ -31,7 +30,8 @@ public class SalvarDocumentoService extends BaseController {
     private String pastaAluno;
     private final String pastaSistemaEstagios = "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah";
 
-    public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos, String email) throws IOException, GeneralSecurityException {
+    public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos, String email)
+                                            throws IOException, GeneralSecurityException {
         Drive service = GoogleUtil.createDriveService();
         String pastaCursoId = verificarExistenciaPastaCurso(service, idCurso);
         if (pastaCursoId.isEmpty()) {
@@ -138,8 +138,6 @@ public class SalvarDocumentoService extends BaseController {
             File file = service.files().create(fileMetadata)
                     .setFields("id")
                     .execute();
-            System.out.println("::PASTA no Google Drive criada para o curso: " + idCurso);
-            System.out.println("::ID da pasta do curso: " + file.getId());
             return file.getId();
         } catch (IOException e) {
             System.out.println("::ERRO ao criar pasta do curso no Google Drive: " + e.getMessage());
@@ -171,6 +169,6 @@ public class SalvarDocumentoService extends BaseController {
             documento.setDocumento(blob);
         List<Documento> docs = new ArrayList<>();
         docs.add(documento);
-        salvarDocumentoService.salvarDocumentoDeSolicitacao("test2331", 123, docs, "euggnio@gmail.com");
+        salvarDocumentoService.salvarDocumentoDeSolicitacao("test2331", 123, docs, "esseemailnaoexiste123@gmail.com");
     }
 }

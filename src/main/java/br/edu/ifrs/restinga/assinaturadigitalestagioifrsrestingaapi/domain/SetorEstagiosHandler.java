@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SetorEstagiosHandler {
+public class SetorEstagiosHandler implements ServidorHandler {
 
     @Autowired
     private HistoricoSolicitacao historicoSolicitacao;

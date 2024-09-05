@@ -1,6 +1,5 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file;
 
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.ServidorRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Estagiarios;
 
 
@@ -13,14 +12,7 @@ import com.lowagie.text.*;
 import com.lowagie.text.Font;
 import com.lowagie.text.pdf.*;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.time.LocalDate;
-
-
 public class PdfGenerator {
 
     private List<Estagiarios> estagiariosList;
@@ -34,29 +26,20 @@ public class PdfGenerator {
     public Document pegarPdfEstagiarios( HttpServletResponse response) throws IOException {
         Document document = new Document(PageSize.A4.rotate());
         PdfWriter.getInstance(document, response.getOutputStream());
-
         document.open();
         Font font = FontFactory.getFont(FontFactory.HELVETICA_BOLD);
         font.setSize(16);
         font.setColor(Color.blue);
-
         Paragraph p = new Paragraph("Lista de estagiários", font);
         p.setAlignment(Paragraph.ALIGN_CENTER);
-
         document.add(p);
-
         PdfPTable table = new PdfPTable(12);
         table.setWidthPercentage(100f);
         table.setSpacingBefore(10);
-
-
         gerarHeader(table);
         gerarDados(table);
-
         document.add(table);
         document.close();
-
-
         return document;
     }
 
@@ -73,23 +56,16 @@ private void gerarDados(PdfPTable table) {
                 cell.setBackgroundColor(Color.getHSBColor(0, 0, 0.85f));
                 par = true;
             }
-
-            //cell.setPhrase(new Phrase(String.valueOf(estagiario.getId()), font));
-            //table.addCell(cell);
-
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getAluno().getNomeCompleto(), font));
             table.addCell(cell);
-            //table.addCell(estagiario.getUrlPastaDocumentos());
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getAluno().getMatricula(), font));
             table.addCell(cell);
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getAluno().getUsuarioSistema().getEmail(), font));
             table.addCell(cell);
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getAluno().getCurso().getNomeCurso(), font));
             table.addCell(cell);
-
             cell.setPhrase(new Phrase(pegarNomeCoordenador(estagiario.getSolicitacao().getCurso().getId()), font));
             table.addCell(cell);
-
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getNomeEmpresa(), font));
             table.addCell(cell);
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getContatoEmpresa(), font));
@@ -102,7 +78,6 @@ private void gerarDados(PdfPTable table) {
             table.addCell(cell);
             cell.setPhrase(new Phrase(estagiario.getSolicitacao().getTurnoEstagio(), font));
             table.addCell(cell);
-
             String status;
             if(estagiario.isAtivo()){
                 status = pegarStatus(estagiario.getSolicitacao().getInicioDataEstagio(), estagiario.getSolicitacao().getFinalDataEstagio());

@@ -5,7 +5,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Solici
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 @Component
-public class DiretorHandler {
+public class DiretorHandler implements ServidorHandler {
 
     @Autowired
     private HistoricoSolicitacao historicoSolicitacao;

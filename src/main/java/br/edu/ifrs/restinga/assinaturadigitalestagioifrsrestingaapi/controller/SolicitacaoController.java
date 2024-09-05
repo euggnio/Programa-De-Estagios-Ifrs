@@ -25,28 +25,17 @@ import java.util.Optional;
 @CrossOrigin("*")
 public class SolicitacaoController extends BaseController {
     @Autowired
-    FileImp fileImp;
-    @Autowired
-    private HistoricoSolicitacao historicoSolicitacao;
-    @Autowired
     private SolicitacaoService solicitacaoService;
 
     @PostMapping(value = "/cadastrarSolicitacao")
     public ResponseEntity cadastrarSolicitacao(@RequestPart("dados") DadosCadastroSolicitacao dados,
                                                @RequestParam("file") List<MultipartFile> arquivos) {
+        Optional<Aluno> aluno = alunoRepository.findById(dados.alunoId());
+        if (aluno.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         return solicitacaoService.cadastrarSolicitacao(dados, arquivos);
     }
-
-
-    //@GetMapping("/listarDocumentos")
-    //@ResponseBody
-    //public String listar(@RequestParam long id) {
-    //    Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
-    //   if(solicitacao.isPresent()){
-    //        return solicitacao.get().getDocumento().get(1).getNome();
-    //   }
-    //    return solicitacao.get().getDocumento().get(1).getNome();
-    // }
 
     @Transactional
     @GetMapping("/setEdicaoDocumentosSolicitacao")
@@ -132,6 +121,7 @@ public class SolicitacaoController extends BaseController {
         var servidor = servidorRepository.findByUsuarioSistemaEmail(email);
         if (servidor == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
         }
 
         List<SolicitarEstagio> publisolicitacoes = solicitacaoService.obterSolicitacoesDoServidor(servidor);
@@ -178,7 +168,7 @@ public class SolicitacaoController extends BaseController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         if (solicitacao.isPresent()) {
             solicitacao.get().setFinalDataEstagio(LocalDate.parse(dataFinalNova, formatter));
             solicitacao.get().setInicioDataEstagio(LocalDate.parse(dataInicioNova, formatter));

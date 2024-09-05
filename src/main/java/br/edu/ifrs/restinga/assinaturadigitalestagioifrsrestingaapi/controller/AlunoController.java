@@ -1,5 +1,7 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller;
 
+import java.sql.Blob;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -8,17 +10,17 @@ import java.util.Optional;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.CursoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.*;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.TratadorDeErros;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Curso;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Role;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuario;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
+import com.google.api.services.drive.model.File;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Aluno;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+
+import javax.sql.rowset.serial.SerialBlob;
 
 @RestController
 public class AlunoController extends BaseController {
@@ -141,6 +143,97 @@ public class AlunoController extends BaseController {
     public ResponseEntity listarIdSolicitacao(@PathVariable long idSolicitacao) {
         var aluno = alunoRepository.findById(idSolicitacao);
         return ResponseEntity.ok(aluno);
+    }
+
+    @GetMapping("/teste/cadastrarAlunos")
+    @Transactional
+    public ResponseEntity cadastrarAlunosTeste(UriComponentsBuilder uriBuilder) throws SQLException {
+        List<Aluno> alunos = new ArrayList<>();
+        String senhaPadrao = "$2a$12$TWHbvyZj1PoPARfSKIDCbemgMZu/PKC5DA.3ejjgeyM2Gnsi.C5ky";
+        List<Usuario> usuariosSistema = new ArrayList<>();
+        Optional<Role> role = roleRepository.findById(1L);
+        List<String> nomes = List.of("Laura Silva",
+                "Eugenio Cartagena Rodrigues",
+                "Miguel Cartagena Rodrigues",
+                "Antonio Lucas",
+                "Pedro Lucas",
+                "Vitoria Rodrigues",
+                "João Paulo",
+                "Maria Altina",
+                "Juliana Machado",
+                "Fernanda Paines",
+                "Leandro Aguiar",
+                "Marcelo Demetrio",
+                "Antonio Olivio",
+                "Gabriel da Silva",
+                "Elisete Rosa",
+                "Thiago Nunes",
+                "Samuel da Silva",
+                "Renan Rodrigues",
+                "Cristiana Rodrigues",
+                "Leona de fatima",
+                "Lorenzo da Silva",
+                "Theo de medeiros",
+                "Isis Pereira",
+                "Aurora de Oliveira",
+                "Luna de Oliveira");
+        List<String> emails = List.of(
+                "laurateste",
+                "eugenioteste",
+                "miguelteste",
+                "antonioteste",
+                "pedroteste",
+                "vitoriateste",
+                "joaoteste",
+                "mariateste",
+                "julianateste",
+                "fernandateste",
+                "leandroteste",
+                "marceloteste",
+                "antonio2teste",
+                "gabrielteste",
+                "renanteste",
+                "eliseteteste",
+                "thiagoteste",
+                "samuelteste",
+                "renanteste",
+                "cristianateste",
+                "leonateste",
+                "lorenzoteste",
+                "theoteste",
+                "isisteste",
+                "aurorateste",
+                "lunateste");
+
+        for (int i = 0; i < emails.size(); i++) {
+            usuariosSistema.add(new Usuario(
+                    emails.get(i) + "@restinga.ifrs.edu.br",
+                    senhaPadrao,
+                    role.get()
+            ));
+        }
+
+        for (int i = 0; i < nomes.size(); i++) {
+            var aluno = new Aluno();
+            aluno.setNomeCompleto(nomes.get(i));
+            aluno.setUsuarioSistema(usuariosSistema.get(i));
+            aluno.setTurno("Manhã");
+            aluno.setMatricula("202000" + ((int) (Math.random() * 1000)));
+            if(i >= 19){
+                aluno.setCurso(cursoRepository.findById(18L).get());
+
+            }else{
+                aluno.setCurso(cursoRepository.findById(10L).get());
+            }
+            
+            aluno.setRole(usuariosSistema.get(i).getRoles());
+            alunos.add(aluno);
+        }
+
+        usuarioRepository.saveAll(usuariosSistema);
+        alunoRepository.saveAll(alunos);
+
+        return ResponseEntity.created(uriBuilder.path("/alunos").build().toUri()).body(alunos);
     }
 
 }
