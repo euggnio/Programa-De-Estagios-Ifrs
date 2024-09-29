@@ -7,6 +7,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCad
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoAluno;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosListagemSolicitacaoServidor;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,21 +61,20 @@ public class SolicitacaoController extends BaseController {
         return ResponseEntity.badRequest().build();
     }
 
-    @PostMapping("/editarEmpresaSolicitacao")
-    public ResponseEntity editarEmpresa(@RequestParam long id, @RequestBody DadosAtualizacaoSolicitacao empresa, @RequestHeader("Authorization") String token) {
-        if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
-            Optional<SolicitarEstagio> solicitarEstagio = solicitacaoRepository.findById(id);
-            if (solicitarEstagio.isPresent()) {
-                solicitarEstagio.get().atualizarDadosEmpresa(empresa);
-                solicitacaoRepository.save(solicitarEstagio.get());
-                historicoSolicitacao.mudarSolicitacao(solicitarEstagio.get(), "Dados da solicitação foram alterados.");
-                return ResponseEntity.ok().build();
+    @PostMapping("editarSolicitacao")
+    public ResponseEntity editarSolicitacao(@RequestParam long id, @RequestBody @Valid DadosAtualizacaoSolicitacao empresa, @RequestHeader("Authorization") String token) {
+            if (usuarioRepository.findByEmailAndNotRoleId1(tokenService.getSubject(token.replace("Bearer ", ""))).isPresent()) {
+                Optional<SolicitarEstagio> solicitarEstagio = solicitacaoRepository.findById(id);
+                if (solicitarEstagio.isPresent()) {
+                    solicitarEstagio.get().atualizarDadosEmpresa(empresa);
+                    solicitacaoRepository.save(solicitarEstagio.get());
+                    historicoSolicitacao.mudarSolicitacao(solicitarEstagio.get(), "Dados da solicitação foram alterados.");
+                    return ResponseEntity.ok().build();
+                }
+                return ResponseEntity.notFound().build();
             }
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
     @GetMapping("/editarEtapa")
     public ResponseEntity setEtapa(@RequestParam long id, @RequestParam String etapa, @RequestHeader("Authorization") String token) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -102,18 +102,6 @@ public class SolicitacaoController extends BaseController {
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.ok(solicitacoes);
     }
-
-    //@GetMapping("/adicionarRespostaSolicitacao")
-    //public ResponseEntity adicionarResposta(@RequestParam long id, @RequestParam String resposta, @RequestHeader("Authorization") String token) {
-    //    String email = tokenService.getSubject(token.replace("Bearer ", ""));
-    //    if (usuarioRepository.findByEmailAndNotRoleId1(email).isPresent()) {
-    //        historicoSolicitacao.salvarHistoricoSolicitacaoId(id, usuarioRepository.findRoleIdByEmail(email), "Aluno resolveu a pendência.");
-    //        solicitacaoRepository.atualizarResposta(id, resposta);
-    //        return ResponseEntity.ok().build();
-    //    }
-    //    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    //}
-
 
     @GetMapping("/listarSolicitacoesPorEmailServidor")
     public ResponseEntity<List<DadosListagemSolicitacaoServidor>> listarSolicitacoesPorEmailServidor(@RequestHeader("Authorization") String token) {
@@ -158,7 +146,6 @@ public class SolicitacaoController extends BaseController {
             return ResponseEntity.notFound().build();
         }
     }
-
 
     @GetMapping("/trocarValidadeContrato")
     public ResponseEntity trocarDataContrato(@RequestParam Long id, @RequestParam String dataFinalNova, @RequestParam String dataInicioNova, @RequestHeader("Authorization") String token) {
