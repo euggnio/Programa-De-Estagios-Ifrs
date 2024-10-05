@@ -20,6 +20,7 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
 import static com.google.api.services.gmail.GmailScopes.GMAIL_SEND;
+
 import static javax.mail.Message.RecipientType.TO;
 
 public class GoogleEmail {
@@ -41,7 +42,7 @@ public class GoogleEmail {
         try {
         NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
         GsonFactory jsonFactory = GsonFactory.getDefaultInstance();
-        Gmail service = new Gmail.Builder(httpTransport, jsonFactory, getCredentials(httpTransport, jsonFactory))
+        Gmail service = new Gmail.Builder(httpTransport, jsonFactory, GoogleUtil.getCredentials(httpTransport))
                 .setApplicationName("Test Mailer")
                 .build();
         Properties props = new Properties();
