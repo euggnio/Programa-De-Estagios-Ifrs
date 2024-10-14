@@ -103,8 +103,12 @@ public class SolicitacaoService extends BaseController {
         solicitacaoRepository.atualizarObservacao(solicitacao.getId(), observacao);
         solicitacao.setObservacao(observacao);
         historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), role, "Observação para edição: " + observacao);
-        EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
-        emailProcessar.enviarEmailObservacao();
+        try {
+            EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+            emailProcessar.enviarEmailObservacao();
+        }finally {
+            solicitacaoRepository.atualizarObservacao(solicitacao.getId(), observacao);
+        }
         return ResponseEntity.ok().build();
     }
 
