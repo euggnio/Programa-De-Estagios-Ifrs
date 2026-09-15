@@ -9,6 +9,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.securi
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,6 +31,15 @@ public class ServidorController extends BaseController {
     @Autowired
     CursoRepository cursoRepository;
 
+    @Value("${curso.id.setor-estagio}")
+    private long cursoIdSetorEstagio;
+
+    @Value("${role.id.setor-estagio}")
+    private long roleIdSetorEstagio;
+
+    @Value("${role.id.aluno}")
+    private long roleIdAluno;
+
     @PostMapping("/cadastrarServidor")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity salvar(@RequestBody @Valid DadosCadastroServidor dadosCadastroServidor, UriComponentsBuilder uriBuilder, @RequestHeader("Authorization") String token) {
@@ -39,7 +49,7 @@ public class ServidorController extends BaseController {
             if (curso.isEmpty()) {
                 return servidorImplementacao.salvar(dadosCadastroServidor, null, uriBuilder);
             }
-            if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && dadosCadastroServidor.curso().getId() != 15) {
+            if (servidorRepository.existsServidorByCurso_IdEquals(curso.get().getId()) && dadosCadastroServidor.curso().getId() != cursoIdSetorEstagio) {
                 return TratadorDeErros.tratarErro409("curso");
             }
             return servidorImplementacao.salvar(dadosCadastroServidor, curso.get(), uriBuilder);
@@ -74,7 +84,7 @@ public class ServidorController extends BaseController {
         }
         Optional<Usuario> user = usuarioRepository.findById(id);
         if (user.isPresent()) {
-            if(user.get().getRoles().getId() == 3){
+            if(user.get().getRoles().getId() == roleIdSetorEstagio){
                 int x = servidorRepository.countByRole_Id(user.get().getRoles().getId());
                 if(x == 1){
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Não é possível excluir o único servidor de estágio");
@@ -102,7 +112,7 @@ public class ServidorController extends BaseController {
         }
         Usuario user = usuarioRepository.findUsuarioByEmail(email);
         if (user != null) {
-            if(user.getRoles().getId() == 1){
+            if(user.getRoles().getId() == roleIdAluno){
                 List<SolicitarEstagio> solicitacao = solicitacaoRepository.findAllByAluno_UsuarioSistema(user);
                 for (SolicitarEstagio solicitarEstagio : solicitacao) {
                     estagiariosRepository.deleteBySolicitacaoId(solicitarEstagio.getId());

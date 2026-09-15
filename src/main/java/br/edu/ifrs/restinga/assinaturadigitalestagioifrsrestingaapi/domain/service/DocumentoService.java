@@ -6,6 +6,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Docume
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,13 @@ import java.util.List;
 public class DocumentoService extends BaseController {
     @Autowired
     public FileImp fileImp;
+
+    @Value("${status.nova}")
+    private String statusNova;
+
+    @Value("${status.respondido}")
+    private String statusRespondido;
+
     @Transactional
     public ResponseEntity salvarDocumentosSolicitacao(SolicitarEstagio solicitacao, List<MultipartFile> documentos, String solicitante){
         if(servidorRepository.existsServidorByUsuarioSistemaEmail(solicitante)){
@@ -48,8 +56,8 @@ public class DocumentoService extends BaseController {
     }
 
     private void solucionarPendente(SolicitarEstagio solicitacao){
-        if(solicitacao.isEditavel() && !solicitacao.getStatus().equalsIgnoreCase("nova")){
-            solicitacao.setStatus("Respondido");
+        if(solicitacao.isEditavel() && !solicitacao.getStatus().equalsIgnoreCase(statusNova)){
+            solicitacao.setStatus(statusRespondido);
             solicitacaoRepository.save(solicitacao);
         }
     }

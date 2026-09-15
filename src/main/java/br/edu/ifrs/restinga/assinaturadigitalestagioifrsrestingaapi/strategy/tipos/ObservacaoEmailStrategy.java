@@ -6,6 +6,15 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.Ema
 public class ObservacaoEmailStrategy implements EmailStrategy {
 
     private SolicitarEstagio solicitacao;
+    private final String frontendUrl;
+    private final String institutionSignature;
+    private final String emailSubject;
+
+    public ObservacaoEmailStrategy(String frontendUrl, String institutionSignature, String emailSubject) {
+        this.frontendUrl = frontendUrl;
+        this.institutionSignature = institutionSignature;
+        this.emailSubject = emailSubject;
+    }
 
     @Override
     public void setSolicitacao(SolicitarEstagio solicitacao) {
@@ -13,7 +22,7 @@ public class ObservacaoEmailStrategy implements EmailStrategy {
     }
     @Override
     public String getTitle() {
-        return "Observação adicionada";
+        return emailSubject;
     }
 
     @Override
@@ -28,17 +37,20 @@ public class ObservacaoEmailStrategy implements EmailStrategy {
                         <br>
                         <span style="font-weight: bold;">%s</span>
                     </p>
-                    <p>Para solucionar, acesse o sistema: <a href="http://localhost:4200/login/">http://localhost:4200/login/</a></p>
+                    <p>Para solucionar, acesse o sistema: <a href="%s/login/">%s/login/</a></p>
                     <p>Bons estudos!</p>
                     <p>Atenciosamente, <br>
-                        Equipe de estágios do IFRS.</p>
+                        %s.</p>
                 </body>
             </html>
         """
                 .formatted(
                         this.solicitacao.getAluno().getNomeCompleto(),
                         this.solicitacao.getTipo(),
-                        this.solicitacao.getObservacao()
+                        this.solicitacao.getObservacao(),
+                        frontendUrl,
+                        frontendUrl,
+                        institutionSignature
                 );
 
 

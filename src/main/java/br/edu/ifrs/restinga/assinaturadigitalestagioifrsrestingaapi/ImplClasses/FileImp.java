@@ -4,6 +4,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.controller.B
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Documento;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import javax.sql.rowset.serial.SerialBlob;
@@ -16,6 +17,12 @@ import java.util.List;
 @Service
 public class FileImp extends BaseController{
 
+    @Value("${document.prefix.signed}")
+    private String prefixSigned;
+
+    @Value("${document.prefix.final-report}")
+    private String prefixFinalReport;
+
     @Transactional
     public boolean SaveDocBlob(List<MultipartFile> docs, SolicitarEstagio solicitacaoId, boolean assinado) {
         try {
@@ -24,7 +31,7 @@ public class FileImp extends BaseController{
                 byte[] bytesDocumento = doc.getBytes();
                 Blob blobDoc = new SerialBlob(bytesDocumento);
                 if(assinado){
-                    documento.setNome("ASSINADO_ " + doc.getOriginalFilename());
+                    documento.setNome(prefixSigned + doc.getOriginalFilename());
                 }else {
                     documento.setNome(doc.getOriginalFilename());
                 }
@@ -45,7 +52,7 @@ public class FileImp extends BaseController{
             Documento documento = new Documento();
             byte[] bytesDocumento = doc.getBytes();
             Blob blobDoc = new SerialBlob(bytesDocumento);
-            documento.setNome("RELATORIO_FINAL_" +doc.getOriginalFilename());
+            documento.setNome(prefixFinalReport + doc.getOriginalFilename());
             documento.setDocumento(blobDoc);
             documento.setAssinado(true);
             documento.setSolicitarEstagio(solicitacaoId);

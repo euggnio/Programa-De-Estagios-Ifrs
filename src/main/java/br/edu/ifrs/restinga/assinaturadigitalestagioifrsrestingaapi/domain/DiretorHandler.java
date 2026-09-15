@@ -3,12 +3,19 @@ package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.ImplClasses.HistoricoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.SolicitarEstagio;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 @Component
 public class DiretorHandler implements ServidorHandler {
 
     @Autowired
     private HistoricoSolicitacao historicoSolicitacao;
+
+    @Value("${status.aprovado}")
+    private String statusAprovado;
+
+    @Value("${status.em-analise}")
+    private String statusEmAnalise;
 
     private SolicitarEstagio solicitacao;
 
@@ -26,11 +33,11 @@ public class DiretorHandler implements ServidorHandler {
 
     private void iniciarDeferimento() {
         System.out.println("Diretor deferindo");
-        solicitacao.setStatusEtapaDiretor("Aprovado");
+        solicitacao.setStatusEtapaDiretor(statusAprovado);
         solicitacao.setAprovado();
         if(solicitacao.isCancelamento()){
             solicitacao.setEtapa("2");
-            solicitacao.setStatus("Em análise");
+            solicitacao.setStatus(statusEmAnalise);
         }else{
             solicitacao.setEtapa("5");
         }

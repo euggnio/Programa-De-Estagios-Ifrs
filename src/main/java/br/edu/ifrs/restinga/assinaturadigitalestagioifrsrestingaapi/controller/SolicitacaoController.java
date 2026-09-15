@@ -9,6 +9,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosLis
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,6 +28,15 @@ import java.util.Optional;
 public class SolicitacaoController extends BaseController {
     @Autowired
     private SolicitacaoService solicitacaoService;
+
+    @Value("${status.em-analise}")
+    private String statusEmAnalise;
+
+    @Value("${status.respondido}")
+    private String statusRespondido;
+
+    @Value("${role.id.aluno}")
+    private long roleIdAluno;
 
     @PostMapping(value = "/cadastrarSolicitacao")
     public ResponseEntity cadastrarSolicitacao(@RequestPart("dados") DadosCadastroSolicitacao dados,
@@ -130,13 +140,13 @@ public class SolicitacaoController extends BaseController {
         if (solicitacao.isPresent()) {
             DadosListagemSolicitacaoAluno dadosSolicitacao = new DadosListagemSolicitacaoAluno(solicitacao.get());
             if (solicitacao.get().isNova()) {
-                solicitacao.get().setStatus("Em análise");
+                solicitacao.get().setStatus(statusEmAnalise);
                 solicitacao.get().setEtapa("2");
                 solicitacao.get().setEditavel(false);
                 solicitacaoRepository.save(solicitacao.get());
             }
             if(solicitacao.get().isRespondido()){
-                solicitacao.get().setStatus("Em análise");
+                solicitacao.get().setStatus(statusEmAnalise);
                 solicitacao.get().setEditavel(false);
                 historicoSolicitacao.mudarSolicitacao(solicitacao.get(), "Resposta visualizada.");
                 solicitacaoRepository.save(solicitacao.get());
@@ -178,13 +188,13 @@ public class SolicitacaoController extends BaseController {
         if (solicitacao.isPresent()) {
             DadosListagemSolicitacaoAluno dadosSolicitacao = new DadosListagemSolicitacaoAluno(solicitacao.get());
             if (solicitacao.get().isNova()) {
-                solicitacao.get().setStatus("Em análise");
+                solicitacao.get().setStatus(statusEmAnalise);
                 solicitacao.get().setEtapa("2");
                 solicitacao.get().setEditavel(false);
                 solicitacaoRepository.save(solicitacao.get());
             }
             if(solicitacao.get().isRespondido()){
-                solicitacao.get().setStatus("Em análise");
+                solicitacao.get().setStatus(statusEmAnalise);
                 solicitacao.get().setEditavel(false);
                 historicoSolicitacao.mudarSolicitacao(solicitacao.get(), "Resposta visualizada.");
                 solicitacaoRepository.save(solicitacao.get());
@@ -224,7 +234,7 @@ public class SolicitacaoController extends BaseController {
     public ResponseEntity indeferirSolicitacao(@PathVariable("id") Long id, @RequestBody DadosAtualizacaoSolicitacao dados, @RequestHeader("Authorization") String token) {
         String email = tokenService.getSubject(token.replace("Bearer ", ""));
         Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(email);
-        if (servidor.getRole().getId() == 1) {
+        if (servidor.getRole().getId() == roleIdAluno) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Você não tem permissão para indeferir essa solicitação.");
         }
         return solicitacaoService.indeferirSolicitacao(id, servidor, dados);

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.SolicitacaoRepository;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.repository.HistoricoSolicitacaoRepository;
@@ -25,6 +26,15 @@ public class HistoricoSolicitacao {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Value("${role.id.coordenador}")
+    private long roleIdCoordenador;
+
+    @Value("${role.id.setor-estagio}")
+    private long roleIdSetorEstagio;
+
+    @Value("${role.id.diretor}")
+    private long roleIdDiretor;
+
     @Transactional
     public void mudarSolicitacao(SolicitarEstagio solicitarEstagio, String situacao){
         Historico log = new Historico(LocalDateTime.now(),solicitarEstagio.getEtapa(),situacao,solicitarEstagio);
@@ -41,11 +51,11 @@ public class HistoricoSolicitacao {
     }
 
     public String getEtapa(Long id){
-        if (id == 2) {
+        if (id == roleIdCoordenador) {
             return "3";
-        } else if (id == 3) {
+        } else if (id == roleIdSetorEstagio) {
             return "2";
-        } else if (id == 4) {
+        } else if (id == roleIdDiretor) {
             return "4";
         }
         return "1";

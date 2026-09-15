@@ -13,6 +13,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.EmailProcessar;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,57 @@ public class SolicitacaoService extends BaseController {
 
     @Autowired
     private EstagiarioService estagiarioService;
+
+    @Autowired
+    private EmailProcessar emailProcessar;
+
+    @Value("${status.nova}")
+    private String statusNova;
+
+    @Value("${status.aprovado}")
+    private String statusAprovado;
+
+    @Value("${status.indeferido}")
+    private String statusIndeferido;
+
+    @Value("${status.cancelado}")
+    private String statusCancelado;
+
+    @Value("${status.em-analise}")
+    private String statusEmAnalise;
+
+    @Value("${status.processando}")
+    private String statusProcessando;
+
+    @Value("${status.finalizado}")
+    private String statusFinalizado;
+
+    @Value("${status.respondido}")
+    private String statusRespondido;
+
+    @Value("${status.relatorio}")
+    private String statusRelatorio;
+
+    @Value("${cargo.coordenador}")
+    private String cargoCoordenador;
+
+    @Value("${cargo.diretor}")
+    private String cargoDiretor;
+
+    @Value("${role.id.aluno}")
+    private long roleIdAluno;
+
+    @Value("${role.id.coordenador}")
+    private long roleIdCoordenador;
+
+    @Value("${role.id.setor-estagio}")
+    private long roleIdSetorEstagio;
+
+    @Value("${role.id.diretor}")
+    private long roleIdDiretor;
+
+    @Value("${curso.id.diretor}")
+    private long cursoIdDiretor;
 
 
     @Transactional
@@ -70,7 +122,7 @@ public class SolicitacaoService extends BaseController {
                 dados.contatoEmpresa(),
                 dados.agente(),
                 dados.observacao(),
-                "Nova",
+                statusNova,
                 "1",
                 true,
                 dados.cargaHoraria(),
@@ -81,10 +133,10 @@ public class SolicitacaoService extends BaseController {
     public boolean verificarSolicitacaoExistente(long alunoId, String tipoSolicitacao) {
         List<SolicitarEstagio> quantidade = solicitacaoRepository.findByAluno_Id(alunoId);
         quantidade.removeIf(solicitacao ->
-                solicitacao.getStatus().equalsIgnoreCase("indeferido")
-                        || solicitacao.getStatus().equalsIgnoreCase("aprovado")
-                        || solicitacao.getStatus().equalsIgnoreCase("cancelado")
-                        || solicitacao.getStatus().equalsIgnoreCase("finalizado"));
+                solicitacao.getStatus().equalsIgnoreCase(statusIndeferido)
+                        || solicitacao.getStatus().equalsIgnoreCase(statusAprovado)
+                        || solicitacao.getStatus().equalsIgnoreCase(statusCancelado)
+                        || solicitacao.getStatus().equalsIgnoreCase(statusFinalizado));
         quantidade.removeIf(solicitacao -> !solicitacao.getTipo().equalsIgnoreCase(tipoSolicitacao));
         return quantidade.size() >= 1;
     }
@@ -92,7 +144,7 @@ public class SolicitacaoService extends BaseController {
     public ResponseEntity setProcessando(long id){
         Optional<SolicitarEstagio> solicitacao = solicitacaoRepository.findById(id);
         if(solicitacao.isPresent() && !solicitacao.get().isCancelamento()){
-            solicitacao.get().setStatus("Processando");
+            solicitacao.get().setStatus(statusProcessando);
             solicitacaoRepository.save(solicitacao.get());
             return ResponseEntity.ok().build();
         }
@@ -104,7 +156,7 @@ public class SolicitacaoService extends BaseController {
         solicitacao.setObservacao(observacao);
         historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), role, "Observação para edição: " + observacao);
         try {
-            EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+            emailProcessar.configurar(solicitacao);
             emailProcessar.enviarEmailObservacao();
         }finally {
             solicitacaoRepository.atualizarObservacao(solicitacao.getId(), observacao);
@@ -125,9 +177,9 @@ public class SolicitacaoService extends BaseController {
     }
 
     public List<SolicitarEstagio> obterSolicitacoesDoServidor(Servidor servidor) {
-        if (servidor.getCargo().equals("Coordenador")) {
+        if (servidor.getCargo().equals(cargoCoordenador)) {
             return obterSolicitacoesParaCoordenador(servidor);
-        } else if (servidor.getCargo().equals("Diretor")) {
+        } else if (servidor.getCargo().equals(cargoDiretor)) {
             return obterSolicitacoesParaDiretor();
         } else {
             return solicitacaoRepository.findAll();
@@ -149,22 +201,22 @@ public class SolicitacaoService extends BaseController {
             if (solicitacao.getEtapa().equals("5")) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Está solicitação já foi concluida como deferida ela não pode mais ser indeferida.");
             }
-            if(servidor.getRole().getId() == 3){
-                solicitacao.setStatusSetorEstagio("Indeferido");
-            } else if (servidor.getRole().getId() == 2) {
-                solicitacao.setStatusEtapaCoordenador("Indeferido");
+            if(servidor.getRole().getId() == roleIdSetorEstagio){
+                solicitacao.setStatusSetorEstagio(statusIndeferido);
+            } else if (servidor.getRole().getId() == roleIdCoordenador) {
+                solicitacao.setStatusEtapaCoordenador(statusIndeferido);
             }else{
-                solicitacao.setStatusEtapaDiretor("Indeferido");
+                solicitacao.setStatusEtapaDiretor(statusIndeferido);
             }
             if (dados.observacao() != null) {
                 solicitacao.setObservacao(dados.observacao());
             }
-            solicitacao.setStatus("Indeferido");
+            solicitacao.setStatus(statusIndeferido);
             solicitacao.setEditavel(false);
             solicitacaoRepository.save(solicitacao);
-            historicoSolicitacao.mudarSolicitacao(solicitacao, "Indeferido, motivo: '" + solicitacao.getObservacao() + "'");
+            historicoSolicitacao.mudarSolicitacao(solicitacao, statusIndeferido + ", motivo: '" + solicitacao.getObservacao() + "'");
 
-            EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+            emailProcessar.configurar(solicitacao);
             emailProcessar.enviarEmailIndeferimento();
 
             return ResponseEntity.ok().build();
@@ -192,8 +244,8 @@ public class SolicitacaoService extends BaseController {
     }
 
     public void trocarProcessamento(SolicitarEstagio solicitarEstagio){
-        if(solicitarEstagio.getStatus().equalsIgnoreCase("Processando")){
-            solicitarEstagio.setStatus("Em análise");
+        if(solicitarEstagio.getStatus().equalsIgnoreCase(statusProcessando)){
+            solicitarEstagio.setStatus(statusEmAnalise);
             solicitacaoRepository.save(solicitarEstagio);
         }
     }
@@ -202,9 +254,10 @@ public class SolicitacaoService extends BaseController {
     //TODO: Refatorar o email e drive para caso conexão esteja offline
     private void deferirSetorEstagio(SolicitarEstagio solicitacao){
             try{
-            EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+            emailProcessar.configurar(solicitacao);
             if(solicitacao.isCancelamento()){
                 estagiarioService.desativarEstagiario(solicitacao.getId());
+                emailProcessar.configurar(solicitacao);
                 emailProcessar.enviarEmailCancelamento();
             }
             else {
@@ -237,7 +290,7 @@ public class SolicitacaoService extends BaseController {
 
     public void GoogleEmaileDrive(SolicitarEstagio solicitacao)  {
         List<Documento> docsParaDrive = documentoRepository.findBySolicitarEstagioId(solicitacao.getId());
-        EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+        emailProcessar.configurar(solicitacao);
         try {
             String nomePasta = solicitacao.getAluno().getNomeCompleto() + " - " + solicitacao.getAluno().getMatricula();
             salvarDocumentoService.salvarDocumentoDeSolicitacao(nomePasta, solicitacao.getCurso().getId(),docsParaDrive, solicitacao.getAluno().getUsuarioSistema().getEmail());
@@ -245,7 +298,7 @@ public class SolicitacaoService extends BaseController {
             throw new RuntimeException(e);
         }
 
-        if (solicitacao.getTipo().equalsIgnoreCase("relatório")) {
+        if (solicitacao.getTipo().equalsIgnoreCase(statusRelatorio)) {
             docsParaDrive.removeIf(documento -> !documento.getNome().contains("RELATORIO"));
             emailProcessar.enviarRelatorioEntregue();
         }
@@ -256,13 +309,13 @@ public class SolicitacaoService extends BaseController {
     }
 
     private void lidarErroDeferimento(SolicitarEstagio solicitacao){
-        solicitacao.setStatus("Em análise");
+        solicitacao.setStatus(statusEmAnalise);
         solicitacao.setEtapa("2");
         solicitacaoRepository.save(solicitacao);
     }
 
     private void deferirCoordenador(SolicitarEstagio solicitacao) {
-            EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+            emailProcessar.configurar(solicitacao);
             if (solicitacao.isRelatorioEntregue() || solicitacao.isCancelamento()) {
                 if (solicitacao.isRelatorioEntregue()) {
                     emailProcessar.enviarRelatorioEntregue();
@@ -279,7 +332,7 @@ public class SolicitacaoService extends BaseController {
     }
 
     public void deferirDiretor(SolicitarEstagio solicitacao){
-        EmailProcessar emailProcessar = new EmailProcessar(solicitacao);
+        emailProcessar.configurar(solicitacao);
         System.out.println(solicitacao.isCancelamento()  + " SSS3");
         if(!solicitacao.isCancelamento()){
             GoogleEmaileDrive(solicitacao);
@@ -296,19 +349,19 @@ public class SolicitacaoService extends BaseController {
         }
     }
     public String validarDeferimento(SolicitarEstagio solicitacao, Role role){
-        if(solicitacao.getStatus().equalsIgnoreCase("Indeferido")){
+        if(solicitacao.getStatus().equalsIgnoreCase(statusIndeferido)){
             return "Não é possivel deferir uma solicitação que já foi concluída ou deferida";
         }
-        else if(solicitacao.getStatus().equalsIgnoreCase("aprovado") && solicitacao.getEtapa().equals("5")){
+        else if(solicitacao.getStatus().equalsIgnoreCase(statusAprovado) && solicitacao.getEtapa().equals("5")){
             return "Está solicitação já foi concluida e ela não pode mais ser deferida.";
         }
-        else if(solicitacao.getEtapa().equals("2") && !(role.getId() == 3)) {
+        else if(solicitacao.getEtapa().equals("2") && !(role.getId() == roleIdSetorEstagio)) {
             return "Apenas o setor de estágios pode deferir uma solicitação na etapa 2.";
         }
-        else if (solicitacao.getEtapa().equals("3") && (role.getId() == 4)) {
+        else if (solicitacao.getEtapa().equals("3") && (role.getId() == roleIdDiretor)) {
             return "Apenas o coordenador pode deferir uma solicitação na etapa 3.";
         }
-        else if (solicitacao.getEtapa().equals("4") && (role.getId() == 2 )) {
+        else if (solicitacao.getEtapa().equals("4") && (role.getId() == roleIdCoordenador )) {
             return "Apenas o diretor pode deferir uma solicitação na etapa 4.";
         }
         else{
@@ -330,7 +383,7 @@ public class SolicitacaoService extends BaseController {
             }
         }
         else if(etapa.equalsIgnoreCase("4")){
-            Optional<Servidor> diretor = servidorRepository.findServidorByCurso_Id(16);
+            Optional<Servidor> diretor = servidorRepository.findServidorByCurso_Id(cursoIdDiretor);
             if (diretor.isPresent()){
                 emailNovoResponsavel = diretor.get().getUsuarioSistema().getEmail();
             }
@@ -339,16 +392,16 @@ public class SolicitacaoService extends BaseController {
             }
         }
         if(!etapa.equalsIgnoreCase(solicitacao.getEtapa())) {
-            EmailProcessar emailProcessar = new EmailProcessar(emailNovoResponsavel, solicitacao);
+            emailProcessar.configurar(emailNovoResponsavel, solicitacao);
             emailProcessar.enviarEmailNotificacaoEtapa();
         }
 
         if (etapa.equalsIgnoreCase("5")) {
-            solicitacaoRepository.atualizarEtapa(id, etapa, "Aprovado");
-        } else if (solicitacao.getStatus().equalsIgnoreCase("relatório")) {
-            solicitacaoRepository.atualizarEtapa(id, etapa, "Relatório");
+            solicitacaoRepository.atualizarEtapa(id, etapa, statusAprovado);
+        } else if (solicitacao.getStatus().equalsIgnoreCase(statusRelatorio)) {
+            solicitacaoRepository.atualizarEtapa(id, etapa, statusRelatorio);
         } else {
-            solicitacaoRepository.atualizarEtapa(id, etapa, "Em análise");
+            solicitacaoRepository.atualizarEtapa(id, etapa, statusEmAnalise);
         }
         historicoSolicitacao.salvarHistoricoSolicitacaoId(id, role, "Etapa foi modificada de " + solicitacao.getEtapaAtualComoString() + " para " + solicitacao.verificarEtapaComoString(etapa));
         return ResponseEntity.ok().build();
@@ -361,7 +414,7 @@ public class SolicitacaoService extends BaseController {
             System.out.println(arquivos.size() + " Tamanho");
             System.out.println(arquivos.get(0).getOriginalFilename() + " Nome");
             fileImp.CriarRelatorioFinal(arquivos.get(0),solicitacao);
-            solicitacao.setStatus("Em análise");
+            solicitacao.setStatus(statusEmAnalise);
             solicitacao.setEtapa("2");
             solicitacao.setCancelamento(false);
             solicitacao.setRelatorioEntregue(true);
@@ -375,7 +428,7 @@ public class SolicitacaoService extends BaseController {
         if(solicitacao.getEtapa().equals("5")){
             historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), 1, "Pedido de cancelamento foi adicionado pelo aluno");
             fileImp.SaveDocBlob(arquivos, solicitacao, false);
-            solicitacao.setStatus("Em análise");
+            solicitacao.setStatus(statusEmAnalise);
             solicitacao.setCancelamento(true);
             solicitacao.setEtapa("2");
             solicitacaoRepository.save(solicitacao);

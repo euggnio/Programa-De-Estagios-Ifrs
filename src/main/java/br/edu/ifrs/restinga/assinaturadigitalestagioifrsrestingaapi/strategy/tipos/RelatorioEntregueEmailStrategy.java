@@ -6,6 +6,13 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.Ema
 public class RelatorioEntregueEmailStrategy implements EmailStrategy {
 
     private SolicitarEstagio solicitacao;
+    private final String institutionSignature;
+    private final String emailSubject;
+
+    public RelatorioEntregueEmailStrategy(String institutionSignature, String emailSubject) {
+        this.institutionSignature = institutionSignature;
+        this.emailSubject = emailSubject;
+    }
 
     @Override
     public void setSolicitacao(SolicitarEstagio solicitacao) {
@@ -13,7 +20,7 @@ public class RelatorioEntregueEmailStrategy implements EmailStrategy {
     }
     @Override
     public String getTitle() {
-        return "Relatório final visto pelo coordenador!!";
+        return emailSubject;
     }
 
     @Override
@@ -28,7 +35,7 @@ public class RelatorioEntregueEmailStrategy implements EmailStrategy {
             <br>
             <p>Bons estudos!</p>
             <p>Atenciosamente, <br>
-                Equipe de estágios do IFRS RESTINGA.</p>
+                """ + institutionSignature + ".</p>" + """
                     </body>
                 </html>
             """;

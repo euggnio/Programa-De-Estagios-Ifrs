@@ -5,6 +5,13 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.Ema
 
 public class EstagioCanceladoEmailStrategy implements EmailStrategy {
     private SolicitarEstagio solicitacao;
+    private final String institutionSignature;
+    private final String emailSubject;
+
+    public EstagioCanceladoEmailStrategy(String institutionSignature, String emailSubject) {
+        this.institutionSignature = institutionSignature;
+        this.emailSubject = emailSubject;
+    }
 
     @Override
     public void setSolicitacao(SolicitarEstagio solicitacao) {
@@ -12,7 +19,7 @@ public class EstagioCanceladoEmailStrategy implements EmailStrategy {
     }
     @Override
     public String getTitle() {
-        return "Estágio Cancelado!!";
+        return emailSubject;
     }
 
     @Override
@@ -26,7 +33,7 @@ public class EstagioCanceladoEmailStrategy implements EmailStrategy {
            Sua solicitação para cancelamento de estágio foi deferida!</p>
             <p>Bons estudos!.</p>
             <p>Atenciosamente, <br>
-                Equipe de estágios do IFRS RESTINGA.</p>
+                """ + institutionSignature + ".</p>" + """
                     </body>
                 </html>
             """;

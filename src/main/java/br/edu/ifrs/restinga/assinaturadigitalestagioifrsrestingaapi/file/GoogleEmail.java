@@ -13,6 +13,8 @@ import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import org.apache.commons.codec.binary.Base64;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import javax.mail.Multipart;
 import javax.mail.Session;
 import javax.mail.internet.*;
@@ -23,18 +25,34 @@ import static com.google.api.services.gmail.GmailScopes.GMAIL_SEND;
 
 import static javax.mail.Message.RecipientType.TO;
 
+@Component
 public class GoogleEmail {
 
+    @Value("${google.drive.tokens-directory}")
+    private String tokensDirectoryPath;
+
+    @Value("${google.oauth.port}")
+    private int oauthPort;
+
+    @Value("${google.drive.application-name}")
+    private String applicationName;
+
+    private static GoogleEmail instance;
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        instance = this;
+    }
 
     private static Credential getCredentials(final NetHttpTransport httpTransport, GsonFactory jsonFactory)
             throws IOException {
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(jsonFactory, new InputStreamReader(Objects.requireNonNull(GoogleEmail.class.getResourceAsStream("/clientKey.json"))));
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 httpTransport, jsonFactory, clientSecrets, Set.of(GMAIL_SEND))
-                .setDataStoreFactory(new FileDataStoreFactory(Paths.get("tokens").toFile()))
+                .setDataStoreFactory(new FileDataStoreFactory(Paths.get(instance.tokensDirectoryPath).toFile()))
                 .setAccessType("offline")
                 .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(instance.oauthPort).build();
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
     }
 
@@ -43,7 +61,7 @@ public class GoogleEmail {
         NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
         GsonFactory jsonFactory = GsonFactory.getDefaultInstance();
         Gmail service = new Gmail.Builder(httpTransport, jsonFactory, GoogleUtil.getCredentials(httpTransport))
-                .setApplicationName("Test Mailer")
+                .setApplicationName(instance.applicationName)
                 .build();
         Properties props = new Properties();
         Session session = Session.getDefaultInstance(props, null);

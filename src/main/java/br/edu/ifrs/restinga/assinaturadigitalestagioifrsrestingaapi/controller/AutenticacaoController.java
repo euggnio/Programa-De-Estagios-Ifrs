@@ -15,6 +15,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -42,6 +43,21 @@ public class AutenticacaoController extends BaseController {
     @Autowired
     private TokenRepository tokenRepository;
 
+    @Value("${role.id.aluno}")
+    private long roleIdAluno;
+
+    @Value("${cargo.servidor-default}")
+    private String cargoServidorDefault;
+
+    @Value("${jwt.password-recovery-minutes}")
+    private long passwordRecoveryMinutes;
+
+    @Value("${email.subject.recuperacao-senha}")
+    private String emailSubjectRecuperacaoSenha;
+
+    @Value("${email.sender-identifier}")
+    private String emailSenderIdentifier;
+
     //Service para cadastro?
     @PostMapping
     public ResponseEntity efetuarLogin(@RequestBody @Valid DadosAutenticacao dados){
@@ -50,10 +66,10 @@ public class AutenticacaoController extends BaseController {
         if(role == null){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        if(role.getRoles().getId() != 1){
+        if(role.getRoles().getId() != roleIdAluno){
            Servidor servidor = servidorRepository.findByUsuarioSistemaEmail(role.getEmail());
             if(servidor == null){
-                nomeUsuario = "Servidor";
+                nomeUsuario = cargoServidorDefault;
             }
         }
         else{
@@ -72,10 +88,10 @@ public class AutenticacaoController extends BaseController {
     @PostMapping("/recuperarSenha")
     public ResponseEntity recuperarSenha(@RequestBody String email){
         if(usuarioRepository.existsByEmail(email)){
-            var tokenJWT = new Token(tokenService.gerarTokenTempo(email,10));
+            var tokenJWT = new Token(tokenService.gerarTokenTempo(email, passwordRecoveryMinutes));
             tokenRepository.save(tokenJWT);
             try {
-                GoogleEmail.sendMail(email, "Recuperação de senha","SISTEMA" ,"""
+                GoogleEmail.sendMail(email, emailSubjectRecuperacaoSenha, emailSenderIdentifier ,"""
                         <html>
                             <body style='font-family: Arial, sans-serif;'>
                             <h2 style='color: #3498db;'>Recuperação de Senha</h2>
@@ -128,7 +144,7 @@ public class AutenticacaoController extends BaseController {
             }
             else
             {
-                Optional<Role> roles = roleRepository.findById(1L);
+                Optional<Role> roles = roleRepository.findById(roleIdAluno);
                 var aluno = new Aluno(dados, roles.get());
                 if (usuarioRepository.findByEmail(dados.email()) != null) {
                     return TratadorDeErros.tratarErro409("email");

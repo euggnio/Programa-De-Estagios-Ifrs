@@ -14,6 +14,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Curso;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Role;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuario;
 import jakarta.persistence.Query;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Servidor;
@@ -31,9 +32,25 @@ public class ServidorImplementacao extends BaseController {
 	@PersistenceContext	
 	EntityManager manager;
 
-	String[] cargo = {"Coordenador","Setor de Estágio","Diretor"};
+	@Value("${cargo.coordenador}")
+	private String cargoCoordenador;
 
+	@Value("${cargo.setor-estagio}")
+	private String cargoSetorEstagio;
 
+	@Value("${cargo.diretor}")
+	private String cargoDiretor;
+
+	@Value("${role.id.coordenador}")
+	private long roleIdCoordenador;
+
+	@Value("${role.id.setor-estagio}")
+	private long roleIdSetorEstagio;
+
+	@Value("${role.id.diretor}")
+	private long roleIdDiretor;
+
+	String[] cargo;
 
 	public Servidor findId(long id) {
 		// TODO Auto-generated method stub
@@ -43,12 +60,12 @@ public class ServidorImplementacao extends BaseController {
 	@Transactional
 	public ResponseEntity salvar(DadosCadastroServidor dadosCadastroServidor, Curso curso, UriComponentsBuilder uriBuilder) {
 		Optional<Role> role = Optional.empty();
-		if(dadosCadastroServidor.cargo().equals(cargo[0])){
-			role = roleRepository.findById(2L);
-		}else if(dadosCadastroServidor.cargo().equals(cargo[1])) {
-			role = roleRepository.findById(3L);
-		} else if (dadosCadastroServidor.cargo().equalsIgnoreCase(cargo[2])) {
-			role = roleRepository.findById(4L);
+		if(dadosCadastroServidor.cargo().equals(cargoCoordenador)){
+			role = roleRepository.findById(roleIdCoordenador);
+		}else if(dadosCadastroServidor.cargo().equals(cargoSetorEstagio)) {
+			role = roleRepository.findById(roleIdSetorEstagio);
+		} else if (dadosCadastroServidor.cargo().equalsIgnoreCase(cargoDiretor)) {
+			role = roleRepository.findById(roleIdDiretor);
 		}
 		var servidor = new Servidor(dadosCadastroServidor, curso,role.get());
 

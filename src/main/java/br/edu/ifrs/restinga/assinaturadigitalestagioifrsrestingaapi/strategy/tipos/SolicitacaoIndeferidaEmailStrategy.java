@@ -6,6 +6,13 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.Ema
 public class SolicitacaoIndeferidaEmailStrategy implements EmailStrategy {
 
     private SolicitarEstagio solicitacao;
+    private final String institutionSignature;
+    private final String emailSubject;
+
+    public SolicitacaoIndeferidaEmailStrategy(String institutionSignature, String emailSubject) {
+        this.institutionSignature = institutionSignature;
+        this.emailSubject = emailSubject;
+    }
 
     @Override
     public void setSolicitacao(SolicitarEstagio solicitacao) {
@@ -14,7 +21,7 @@ public class SolicitacaoIndeferidaEmailStrategy implements EmailStrategy {
 
     @Override
     public String getTitle() {
-        return "Solicitação indeferida!";
+        return emailSubject;
     }
 
     @Override
@@ -30,7 +37,7 @@ public class SolicitacaoIndeferidaEmailStrategy implements EmailStrategy {
                     <br>
                     <br>
                     <p>Atenciosamente, <br>
-                    Equipe de estágios do IFRS RESTINGA.</p>
+                    """ + institutionSignature + ".</p>" + """
                 </body>
                 </html>
             """;

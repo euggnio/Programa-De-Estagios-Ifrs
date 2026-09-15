@@ -9,6 +9,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.Usuari
 import com.lowagie.text.Document;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.tomcat.util.http.fileupload.ByteArrayOutputStream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,12 @@ import java.util.Optional;
 
 @RestController
 public class EstagiariosController extends BaseController {
+
+    @Value("${role.id.aluno}")
+    private long roleIdAluno;
+
+    @Value("${pagination.page-size}")
+    private int pageSize;
 
     @GetMapping("/retornarListaEstagiarios")
     public ResponseEntity listaEstagiarios(@RequestHeader("Authorization") String token) {
@@ -77,7 +84,7 @@ public class EstagiariosController extends BaseController {
     public ResponseEntity listaEstagiariosPagina(@RequestParam int pagina, @RequestHeader("Authorization") String token) {
         if (tokenService.isServidor(token.replace("Bearer ", ""))) {
             try {
-                List<Estagiarios> estagiarios = estagiariosRepository.pegarPagina(pagina * 20);
+                List<Estagiarios> estagiarios = estagiariosRepository.pegarPagina(pagina * pageSize);
                 estagiarios.sort((est1, est2) -> {
                     String nome1 = est1.getSolicitacao().getAluno().getNomeCompleto();
                     String nome2 = est2.getSolicitacao().getAluno().getNomeCompleto();
@@ -95,7 +102,7 @@ public class EstagiariosController extends BaseController {
     public ResponseEntity retornarEstagioEstagiario(@RequestParam Long id, @RequestHeader("Authorization") String token) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Usuario userDetails = (Usuario) authentication.getPrincipal();
-        if (userDetails.getRoles().getName().equals("ROLE_ALUNO")) {
+        if (userDetails.getRoles().getId() == roleIdAluno) {
             try {
                 return ResponseEntity.ok(estagiariosRepository.pegarEstagioPorAluno(id));
             } catch (RuntimeException e) {
@@ -122,7 +129,7 @@ public class EstagiariosController extends BaseController {
     public ResponseEntity<String> cancelarEstagio(@RequestBody String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Usuario userDetails = (Usuario) authentication.getPrincipal();
-        if (!userDetails.getRoles().getName().equals("ROLE_ALUNO")) {
+        if (userDetails.getRoles().getId() != roleIdAluno) {
             try {
                 var estagio = estagiariosRepository.findById(Long.valueOf(id)).get();
                 estagio.setAtivo(false);

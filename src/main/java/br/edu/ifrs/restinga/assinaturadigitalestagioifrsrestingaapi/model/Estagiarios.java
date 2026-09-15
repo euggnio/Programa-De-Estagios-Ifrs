@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,9 +24,16 @@ public class Estagiarios {
     private String urlPastaDocumentos;
     private boolean ativo;
 
+    private static String googleDriveBaseUrl;
+
+    @Value("${google.drive.base-url}")
+    public void setGoogleDriveBaseUrlStatic(String url) {
+        Estagiarios.googleDriveBaseUrl = url;
+    }
+
     public Estagiarios(SolicitarEstagio solicitacao, String urlPastaDocumentos){
         this.solicitacao = solicitacao;
-        this.urlPastaDocumentos = "https://drive.google.com/drive/u/0/folders/" + urlPastaDocumentos;
+        this.urlPastaDocumentos = googleDriveBaseUrl + urlPastaDocumentos;
         this.ativo = true;
     }
 

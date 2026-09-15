@@ -6,6 +6,15 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.Ema
 public class NotificacaoEtapaEmailStrategy implements EmailStrategy {
 
     private SolicitarEstagio solicitacao;
+    private final String frontendUrl;
+    private final String institutionSignature;
+    private final String emailSubject;
+
+    public NotificacaoEtapaEmailStrategy(String frontendUrl, String institutionSignature, String emailSubject) {
+        this.frontendUrl = frontendUrl;
+        this.institutionSignature = institutionSignature;
+        this.emailSubject = emailSubject;
+    }
 
     @Override
     public void setSolicitacao(SolicitarEstagio solicitacao) {
@@ -13,15 +22,15 @@ public class NotificacaoEtapaEmailStrategy implements EmailStrategy {
     }
     @Override
     public String getTitle() {
-        return "Documentação de estágio";
+        return emailSubject;
     }
 
     @Override
     public String getBody() {
         return "Olá!\n" +
                 "<span>Uma nova documentação de estágio está pronta para ser analisada em sua etapa.</span><br>\n" +
-                "<span>Acesse o link a seguir para visualizar: <b>http://localhost:4200/login/" + this.solicitacao.getId() + "?servidor=true</b></span>\n" +
+                "<span>Acesse o link a seguir para visualizar: <b>" + frontendUrl + "/login/" + this.solicitacao.getId() + "?servidor=true</b></span>\n" +
                 "<p>Atenciosamente, <br>\n" +
-                "Equipe de estágios do IFRS</p>";
+                institutionSignature + "</p>";
     }
 }

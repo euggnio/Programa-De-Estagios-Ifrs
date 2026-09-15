@@ -7,8 +7,13 @@ public class DocumentosAssinadosEmailStrategy implements EmailStrategy {
 
     private SolicitarEstagio solicitacao;
     private String link;
-    public DocumentosAssinadosEmailStrategy(String linkDocs) {
+    private final String googleDriveBaseUrl;
+    private final String emailSubject;
+
+    public DocumentosAssinadosEmailStrategy(String linkDocs, String googleDriveBaseUrl, String emailSubject) {
         this.link = linkDocs;
+        this.googleDriveBaseUrl = googleDriveBaseUrl;
+        this.emailSubject = emailSubject;
     }
 
     @Override
@@ -17,7 +22,7 @@ public class DocumentosAssinadosEmailStrategy implements EmailStrategy {
     }
     @Override
     public String getTitle() {
-        return "Documentos Assinados!!";
+        return emailSubject;
     }
 
     @Override
@@ -29,7 +34,7 @@ public class DocumentosAssinadosEmailStrategy implements EmailStrategy {
                     <p>Olá""" + " " + this.solicitacao.getAluno().getNomeCompleto() + ",</p>" + """
              <p>Os documentos da sua solicitação foram assinados!!!</p>
             <p style='background-color: #ecf0f1; padding: 10px; font-size: 18px; font-weight: bold;'>"""
-                + " https://drive.google.com/drive/u/0/folders/" + this.link + "</p>" + """
+                + googleDriveBaseUrl + this.link + "</p>" + """
                         <p>Desejamos um  bom estágio!!!.</p>
                     </body>
                 </html>

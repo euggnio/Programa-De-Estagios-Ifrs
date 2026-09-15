@@ -10,6 +10,7 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.Permission;
 import lombok.Getter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import javax.mail.MessagingException;
 import javax.sql.rowset.serial.SerialBlob;
@@ -27,8 +28,16 @@ import java.util.List;
 @Getter
 public class SalvarDocumentoService extends BaseController {
 
+    @Value("${google.drive.root-folder-id}")
+    private String pastaSistemaEstagios;
+
+    @Value("${google.drive.mime-folder}")
+    private String mimeFolder;
+
+    @Value("${google.drive.mime-upload}")
+    private String mimeUpload;
+
     private String pastaAluno;
-    private final String pastaSistemaEstagios = "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah";
 
     public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos, String email)
                                             throws IOException, GeneralSecurityException {
@@ -54,7 +63,7 @@ public class SalvarDocumentoService extends BaseController {
                 System.err.println("::ERRO ao converter BLOB: " + e.getMessage());
                 throw new RuntimeException(e);
             }
-            InputStreamContent mediaContent = new InputStreamContent("application/octet-stream", new ByteArrayInputStream(bytes));
+            InputStreamContent mediaContent = new InputStreamContent(mimeUpload, new ByteArrayInputStream(bytes));
             try {
                 File file = service.files().create(fileMetadata, mediaContent)
                         .setFields("id")
@@ -73,7 +82,7 @@ public class SalvarDocumentoService extends BaseController {
 
         File fileMetadata = new File();
         fileMetadata.setName(matriculaAluno);
-        fileMetadata.setMimeType("application/vnd.google-apps.folder");
+        fileMetadata.setMimeType(mimeFolder);
         fileMetadata.setParents(Collections.singletonList(pastaCursoId));
         try {
             File file = service.files().create(fileMetadata)
@@ -94,7 +103,7 @@ public class SalvarDocumentoService extends BaseController {
             System.out.println("::Pasta do curso: " + pastaCursoId);
             FileList result = service.files().list()
 
-                    .setQ("'" +pastaCursoId + "' in parents and mimeType='application/vnd.google-apps.folder'")
+                    .setQ("'" +pastaCursoId + "' in parents and mimeType='" + mimeFolder + "'")
                     .setFields("nextPageToken, files(id, name)")
                     .setPageToken(pageToken)
                     .execute();
@@ -115,7 +124,7 @@ public class SalvarDocumentoService extends BaseController {
         String pageToken = null;
         do {
             FileList result = service.files().list()
-                    .setQ("'" + "15KVLbIBFCyDcYvaUHeJndqX-2qh5Mwah" + "' in parents and mimeType='application/vnd.google-apps.folder'")
+                    .setQ("'" + pastaSistemaEstagios + "' in parents and mimeType='" + mimeFolder + "'")
                     .setFields("nextPageToken, files(id, name)")
                     .setPageToken(pageToken)
                     .execute();
@@ -132,7 +141,7 @@ public class SalvarDocumentoService extends BaseController {
     public String criarPastaCurso(Drive service, long idCurso) {
         File fileMetadata = new File();
         fileMetadata.setName(""+ getNomeCursoPorId(idCurso));
-        fileMetadata.setMimeType("application/vnd.google-apps.folder");
+        fileMetadata.setMimeType(mimeFolder);
         fileMetadata.setParents(Collections.singletonList(pastaSistemaEstagios));
         try {
             File file = service.files().create(fileMetadata)

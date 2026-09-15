@@ -13,6 +13,7 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import com.google.api.services.drive.model.File;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,11 +28,14 @@ public class AlunoController extends BaseController {
     @Autowired
     CursoRepository cursoRepository;
 
+    @Value("${role.id.aluno}")
+    private long roleIdAluno;
+
     @PostMapping("/cadastrarAluno")
     @Transactional
     public ResponseEntity cadastrarAluno(@RequestBody @Valid DadosCadastroAluno dados, UriComponentsBuilder uriBuilder) {
         Optional<Curso> curso = cursoRepository.findById(dados.curso());
-        Optional<Role> role = roleRepository.findById(1L);
+        Optional<Role> role = roleRepository.findById(roleIdAluno);
         var aluno = new Aluno(dados, curso.get(), role.get());
 
         if (usuarioRepository.findByEmail(dados.usuarioSistema().getEmail()) != null) {
@@ -62,7 +66,7 @@ public class AlunoController extends BaseController {
     public ResponseEntity cadastrarAlunos(@RequestBody @Valid List<DadosCadastroAluno> dados, UriComponentsBuilder uriBuilder) {
         List<Aluno> alunos = new ArrayList<>();
         List<Usuario> usuariosSistema = new ArrayList<>();
-        Optional<Role> role = roleRepository.findById(1L);
+        Optional<Role> role = roleRepository.findById(roleIdAluno);
         for (DadosCadastroAluno dado : dados) {
             Optional<Curso> curso = cursoRepository.findById(dado.curso());
 
@@ -151,7 +155,7 @@ public class AlunoController extends BaseController {
         List<Aluno> alunos = new ArrayList<>();
         String senhaPadrao = "$2a$12$TWHbvyZj1PoPARfSKIDCbemgMZu/PKC5DA.3ejjgeyM2Gnsi.C5ky";
         List<Usuario> usuariosSistema = new ArrayList<>();
-        Optional<Role> role = roleRepository.findById(1L);
+        Optional<Role> role = roleRepository.findById(roleIdAluno);
         List<String> nomes = List.of("Laura Silva",
                 "Eugenio Cartagena Rodrigues",
                 "Miguel Cartagena Rodrigues",
