@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
@@ -20,15 +18,21 @@ services:
     restart: unless-stopped
 
   app:
-    build: .
+    build:
+      context: .
+      network: host
     ports:
       - "8088:8088"
+      # callback do OAuth instalado (LocalServerReceiver binda em 0.0.0.0:8888)
+      - "8888:8888"
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - GOOGLE_DRIVE_ROOT_FOLDER_ID=${GOOGLE_DRIVE_ROOT_FOLDER_ID:-}
+      # client OAuth lido pelo backend em runtime (default = arquivo dentro do jar)
+      - GOOGLE_DRIVE_CREDENTIALS_PATH=${GOOGLE_DRIVE_CREDENTIALS_PATH:-classpath:clientKey.json}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:4200}
     volumes:
       - ./keys:/app/keys:ro

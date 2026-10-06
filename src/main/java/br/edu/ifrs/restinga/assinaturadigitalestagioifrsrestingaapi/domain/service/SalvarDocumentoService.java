@@ -10,6 +10,9 @@ import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.Permission;
 import lombok.Getter;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import javax.mail.MessagingException;
@@ -28,6 +31,8 @@ import java.util.List;
 @Getter
 public class SalvarDocumentoService extends BaseController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SalvarDocumentoService.class);
+
     @Value("${google.drive.root-folder-id}")
     private String pastaSistemaEstagios;
 
@@ -39,8 +44,26 @@ public class SalvarDocumentoService extends BaseController {
 
     private String pastaAluno;
 
+    @PostConstruct
+    public void verificarPastaRaiz() {
+        if (isPastaRaizConfigurada()) {
+            LOGGER.info("Pasta raiz do Google Drive: '{}'", pastaSistemaEstagios);
+        } else {
+            LOGGER.warn("google.drive.root-folder-id (GOOGLE_DRIVE_ROOT_FOLDER_ID) não configurado: "
+                    + "a criação de pastas no Drive está indisponível e os deferimentos serão bloqueados.");
+        }
+    }
+
+    public boolean isPastaRaizConfigurada() {
+        return pastaSistemaEstagios != null && !pastaSistemaEstagios.isBlank();
+    }
+
     public void salvarDocumentoDeSolicitacao(String idChamado,long idCurso, List<Documento> documentos, String email)
                                             throws IOException, GeneralSecurityException {
+        if (!isPastaRaizConfigurada()) {
+            throw new IllegalStateException(
+                    "Pasta raiz do Google Drive não configurada (google.drive.root-folder-id / GOOGLE_DRIVE_ROOT_FOLDER_ID).");
+        }
         Drive service = GoogleUtil.createDriveService();
         String pastaCursoId = verificarExistenciaPastaCurso(service, idCurso);
         if (pastaCursoId.isEmpty()) {
@@ -121,6 +144,7 @@ public class SalvarDocumentoService extends BaseController {
     }
 
     public String verificarExistenciaPastaCurso(Drive service, long idCurso) throws IOException {
+        String nomeCurso = getNomeCursoPorId(idCurso);
         String pageToken = null;
         do {
             FileList result = service.files().list()
@@ -129,7 +153,7 @@ public class SalvarDocumentoService extends BaseController {
                     .setPageToken(pageToken)
                     .execute();
             for (File file : result.getFiles()) {
-                if (file.getName().equals(getNomeCursoPorId(idCurso))) {
+                if (file.getName().equals(nomeCurso)) {
                     return file.getId();
                 }
             }
@@ -140,7 +164,7 @@ public class SalvarDocumentoService extends BaseController {
 
     public String criarPastaCurso(Drive service, long idCurso) {
         File fileMetadata = new File();
-        fileMetadata.setName(""+ getNomeCursoPorId(idCurso));
+        fileMetadata.setName(getNomeCursoPorId(idCurso));
         fileMetadata.setMimeType(mimeFolder);
         fileMetadata.setParents(Collections.singletonList(pastaSistemaEstagios));
         try {
@@ -155,18 +179,10 @@ public class SalvarDocumentoService extends BaseController {
     }
 
     public String getNomeCursoPorId(long idCurso) {
-        if(idCurso == 10) return "Análise e Desenvolvimento de Sistemas - " + idCurso;
-        if(idCurso == 11) return "Letras Português e Espanhol - " + idCurso;
-        if(idCurso == 12) return "Eletrônica Industrial - " + idCurso;
-        if(idCurso == 13) return "Gestão Desportiva e de Lazer - " + idCurso;
-        if(idCurso == 14) return "Processos Gerenciais - " + idCurso;
-        if(idCurso == 15) return "Setor Estágio - " + idCurso;
-        if(idCurso == 16) return "Diretor - " + idCurso;
-        if(idCurso == 17) return "Lazer - " + idCurso;
-        if(idCurso == 18) return "Informática - " + idCurso;
-        if(idCurso == 19) return "Eletrônica - " + idCurso;
-        if(idCurso == 20) return "Guia de Turismo - " + idCurso;
-        return "Curso não encontrado ";
+        return cursoRepository.findById(idCurso)
+                .map(curso -> curso.getNomeCurso() + " - " + idCurso)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Curso de id " + idCurso + " não encontrado na tabela 'curso'; pasta do curso no Drive não pode ser resolvida."));
     }
     public static void main(String... args) throws IOException, GeneralSecurityException, SQLException, MessagingException {
         SalvarDocumentoService salvarDocumentoService = new SalvarDocumentoService();

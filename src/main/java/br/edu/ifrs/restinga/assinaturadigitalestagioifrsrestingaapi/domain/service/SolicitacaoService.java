@@ -9,20 +9,31 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.Diret
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.domain.SetorEstagiosHandler;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAtualizacaoSolicitacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosCadastroSolicitacao;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleAuthPendenteException;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.strategy.EmailProcessar;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
 @Service
 public class SolicitacaoService extends BaseController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolicitacaoService.class);
+
+    @Autowired
+    private ApplicationEventPublisher publicadorDeEventos;
 
     @Autowired
     FileImp fileImp;
@@ -226,7 +237,27 @@ public class SolicitacaoService extends BaseController {
 
     @Transactional
     public ResponseEntity<String> deferirSolicitacao(SolicitarEstagio solicitacao, Servidor servidor, List<MultipartFile> documentos){
-        if(validarDeferimento(solicitacao,servidor.getRole()).equalsIgnoreCase("")){
+        String validacao = validarDeferimento(solicitacao,servidor.getRole());
+        if(!validacao.equalsIgnoreCase("")){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(validacao);
+        }
+        long papel = servidor.getRole().getId();
+        if (precisaGoogleDrive(solicitacao, papel) && !salvarDocumentoService.isPastaRaizConfigurada()) {
+            // fallback: não deixa a solicitação presa em "Processando" por uma configuração ausente
+            EstadoDeferimento estadoBloqueio = EstadoDeferimento.de(solicitacao);
+            trocarProcessamento(solicitacao);
+            historicoSolicitacao.mudarSolicitacao(solicitacao,
+                    "Deferimento bloqueado: pasta raiz do Google Drive não configurada (GOOGLE_DRIVE_ROOT_FOLDER_ID)");
+            publicadorDeEventos.publishEvent(new RecuperacaoDeferimento(solicitacao.getId(), estadoBloqueio,
+                    "pasta raiz do Google Drive não configurada"));
+            LOGGER.warn("Deferimento da solicitação {} bloqueado: pasta raiz do Google Drive não configurada",
+                    solicitacao.getId());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Deferimento bloqueado: a pasta raiz do Google Drive não está configurada "
+                            + "(google.drive.root-folder-id / GOOGLE_DRIVE_ROOT_FOLDER_ID).");
+        }
+        EstadoDeferimento anterior = EstadoDeferimento.de(solicitacao);
+        try {
             switch (servidor.getRole().getId().toString()) {
                 case "3" -> deferirSetorEstagio(solicitacao);
                 case "2" -> deferirCoordenador(solicitacao);
@@ -239,8 +270,131 @@ public class SolicitacaoService extends BaseController {
                 historicoSolicitacao.salvarHistoricoSolicitacaoId(solicitacao.getId(), servidor.getRole().getId(), "Solicitação foi deferida");
             }
             return ResponseEntity.ok().build();
+        } catch (Exception falha) {
+            return recuperarAposFalha(solicitacao, anterior, falha);
         }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(validarDeferimento(solicitacao,servidor.getRole()));
+    }
+
+    /**
+     * Se a pasta raiz do Drive não estiver configurada, os caminhos que gravam documentos
+     * (setor de estágio, coordenador e diretor) precisam do Drive. Cancelamento e deferimento
+     * de relatório pelo coordenador não usam o Drive.
+     */
+    private boolean precisaGoogleDrive(SolicitarEstagio solicitacao, long papel) {
+        if (solicitacao.isCancelamento()) {
+            return false;
+        }
+        if (papel == roleIdCoordenador) {
+            return !solicitacao.isRelatorioEntregue();
+        }
+        return true;
+    }
+
+    /**
+     * Fallback de falha no deferimento: o status "Processando" é gravado por uma requisição
+     * separada (setProcessando), então o rollback da transação do deferimento não o desfaz.
+     * Aqui restauramos o estado anterior, garantimos sair de "Processando" e devolvemos uma
+     * resposta de erro (em vez de estourar exceção) para que a transação commite essa recuperação.
+     */
+    private ResponseEntity<String> recuperarAposFalha(SolicitarEstagio solicitacao, EstadoDeferimento anterior, Exception falha) {
+        String motivo = descreverFalha(falha);
+        Long id = solicitacao.getId();
+        try {
+            anterior.restaurarEm(solicitacao);
+            solicitacao.setStatus(statusEmAnalise);
+            solicitacaoRepository.save(solicitacao);
+        } catch (Exception persistencia) {
+            LOGGER.error("Não foi possível restaurar o status da solicitação {}", id, persistencia);
+        }
+        try {
+            historicoSolicitacao.mudarSolicitacao(solicitacao,
+                    cortar("Falha ao deferir (" + motivo + "). Status restaurado para '" + statusEmAnalise + "'.", 250));
+        } catch (Exception persistencia) {
+            LOGGER.error("Não foi possível registrar o histórico da falha na solicitação {}", id, persistencia);
+        }
+        // rede de segurança: se a transação do deferimento terminar em rollback (inclusive
+        // por causa desta própria recuperação), a restauração acima some com o rollback;
+        // este evento roda depois do rollback e reaplica o estado fora da transação perdida.
+        publicadorDeEventos.publishEvent(new RecuperacaoDeferimento(id, anterior, motivo));
+        LOGGER.error("Falha ao deferir a solicitação {}: {}", id, motivo, falha);
+        GoogleAuthPendenteException pendente = causaDoTipo(falha, GoogleAuthPendenteException.class);
+        if (pendente != null) {
+            String url = pendente.getUrlAutorizacao() == null ? "" : " URL: " + pendente.getUrlAutorizacao();
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(pendente.getMessage() + url);
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Falha ao deferir a solicitação: " + motivo);
+    }
+
+    private static <T extends Throwable> T causaDoTipo(Throwable falha, Class<T> tipo) {
+        Throwable atual = falha;
+        while (atual != null) {
+            if (tipo.isInstance(atual)) {
+                return tipo.cast(atual);
+            }
+            atual = atual.getCause();
+        }
+        return null;
+    }
+
+    private static String descreverFalha(Throwable falha) {
+        Throwable raiz = falha;
+        while (raiz.getCause() != null) {
+            raiz = raiz.getCause();
+        }
+        String descricao = raiz.getMessage() == null ? raiz.getClass().getSimpleName() : raiz.getMessage();
+        descricao = descricao.replaceAll("\\s+", " ").trim();
+        return descricao.length() > 300 ? descricao.substring(0, 300) + "..." : descricao;
+    }
+
+    private static String cortar(String texto, int limite) {
+        return texto.length() <= limite ? texto : texto.substring(0, limite);
+    }
+
+    public record RecuperacaoDeferimento(Long solicitacaoId, EstadoDeferimento estadoAnterior, String motivo) {
+    }
+
+    /**
+     * Rede de segurança para a solicitação não ficar presa em "Processando": se a transação do
+     * deferimento terminar em rollback (inclusive por falha na própria restauração), a restauração
+     * feita dentro da transação também desaparece. Este listener roda depois do rollback, fora dessa
+     * transação, e reaplica o estado anterior + status "Em analise".
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
+    public void restaurarSolicitacaoAposRollback(RecuperacaoDeferimento evento) {
+        solicitacaoRepository.findById(evento.solicitacaoId()).ifPresent(solicitacao -> {
+            evento.estadoAnterior().restaurarEm(solicitacao);
+            solicitacao.setStatus(statusEmAnalise);
+            solicitacaoRepository.save(solicitacao);
+            LOGGER.warn("Transação de deferimento revertida: solicitação {} restaurada para '{}'",
+                    evento.solicitacaoId(), statusEmAnalise);
+            try {
+                historicoSolicitacao.mudarSolicitacao(solicitacao,
+                        cortar("Falha ao deferir (transação revertida): " + evento.motivo(), 250));
+            } catch (Exception persistencia) {
+                LOGGER.warn("Não foi possível registrar o histórico da solicitação {} após rollback",
+                        evento.solicitacaoId(), persistencia);
+            }
+        });
+    }
+
+    private record EstadoDeferimento(String status, String etapa, String statusSetorEstagio,
+                                     String statusEtapaCoordenador, String statusEtapaDiretor, boolean editavel) {
+
+        static EstadoDeferimento de(SolicitarEstagio solicitacao) {
+            return new EstadoDeferimento(solicitacao.getStatus(), solicitacao.getEtapa(),
+                    solicitacao.getStatusSetorEstagio(), solicitacao.getStatusEtapaCoordenador(),
+                    solicitacao.getStatusEtapaDiretor(), solicitacao.isEditavel());
+        }
+
+        void restaurarEm(SolicitarEstagio solicitacao) {
+            solicitacao.setStatus(status);
+            solicitacao.setEtapa(etapa);
+            solicitacao.setStatusSetorEstagio(statusSetorEstagio);
+            solicitacao.setStatusEtapaCoordenador(statusEtapaCoordenador);
+            solicitacao.setStatusEtapaDiretor(statusEtapaDiretor);
+            solicitacao.setEditavel(editavel);
+        }
     }
 
     public void trocarProcessamento(SolicitarEstagio solicitarEstagio){
@@ -269,7 +423,6 @@ public class SolicitacaoService extends BaseController {
             solicitacaoRepository.save(solicitacao);
         }
             catch (Exception e) {
-                lidarErroDeferimento(solicitacao);
                 throw new RuntimeException(e);
             }
     }
@@ -306,12 +459,6 @@ public class SolicitacaoService extends BaseController {
             emailProcessar.enviarEmailDocsAssinadosComLink(salvarDocumentoService.getPastaAluno());
         }
 
-    }
-
-    private void lidarErroDeferimento(SolicitarEstagio solicitacao){
-        solicitacao.setStatus(statusEmAnalise);
-        solicitacao.setEtapa("2");
-        solicitacaoRepository.save(solicitacao);
     }
 
     private void deferirCoordenador(SolicitarEstagio solicitacao) {

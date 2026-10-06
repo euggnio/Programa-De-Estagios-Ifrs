@@ -5,10 +5,10 @@ import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.Autentic
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAutenticacao;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosAutenticacaoGoogle;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.dto.DadosDetalhamentoAluno;
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleAuthPendenteException;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleEmail;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleUtil;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.ConfigProperties;
-import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error.TratadorDeErros;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.security.TokenService;
 import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.model.*;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -102,6 +102,9 @@ public class AutenticacaoController extends BaseController {
                             </body>
                         </html>""");
                 return ResponseEntity.ok().build();
+            } catch (GoogleAuthPendenteException e) {
+                String mensagem = e.getMessage() + (e.getUrlAutorizacao() == null ? "" : " URL: " + e.getUrlAutorizacao());
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mensagem);
             } catch (Exception e) {
                 return ResponseEntity.badRequest().build();
             }
@@ -145,10 +148,11 @@ public class AutenticacaoController extends BaseController {
             else
             {
                 Optional<Role> roles = roleRepository.findById(roleIdAluno);
-                var aluno = new Aluno(dados, roles.get());
-                if (usuarioRepository.findByEmail(dados.email()) != null) {
-                    return TratadorDeErros.tratarErro409("email");
+                if (roles.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                            .body("Role de aluno (id=" + roleIdAluno + ") nao encontrada no banco. Execute a carga inicial (insert.sql).");
                 }
+                var aluno = new Aluno(dados, roles.get());
                 var usuarioSistema = new Usuario(
                         dados.email(),
                         roles.get(),

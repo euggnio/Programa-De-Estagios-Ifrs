@@ -1,5 +1,6 @@
 package br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.infra.error;
 
+import br.edu.ifrs.restinga.assinaturadigitalestagioifrsrestingaapi.file.GoogleAuthPendenteException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,27 @@ public class TratadorDeErros {
     public static ResponseEntity tratarErro400(HttpStatus badRequest) {
         return ResponseEntity.status(badRequest)
                 .body("O email informado não está no padrão correto");
+    }
+
+    @ExceptionHandler(GoogleAuthPendenteException.class)
+    public ResponseEntity<String> tratarAutorizacaoGooglePendente(GoogleAuthPendenteException ex) {
+        StringBuilder corpo = new StringBuilder(ex.getMessage());
+        if (ex.getUrlAutorizacao() != null) {
+            corpo.append(" URL: ").append(ex.getUrlAutorizacao());
+        }
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(corpo.toString());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> tratarRuntimeComAutorizacaoGooglePendente(RuntimeException ex) {
+        Throwable causa = ex;
+        while (causa != null) {
+            if (causa instanceof GoogleAuthPendenteException pendente) {
+                return tratarAutorizacaoGooglePendente(pendente);
+            }
+            causa = causa.getCause();
+        }
+        throw ex;
     }
 
     @ExceptionHandler(EntityNotFoundException.class)

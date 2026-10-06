@@ -46,14 +46,7 @@ public class GoogleEmail {
 
     private static Credential getCredentials(final NetHttpTransport httpTransport, GsonFactory jsonFactory)
             throws IOException {
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(jsonFactory, new InputStreamReader(Objects.requireNonNull(GoogleEmail.class.getResourceAsStream("/clientKey.json"))));
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                httpTransport, jsonFactory, clientSecrets, Set.of(GMAIL_SEND))
-                .setDataStoreFactory(new FileDataStoreFactory(Paths.get(instance.tokensDirectoryPath).toFile()))
-                .setAccessType("offline")
-                .build();
-        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(instance.oauthPort).build();
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+        return GoogleUtil.getCredentials(httpTransport);
     }
 
     public static void sendMail(String paraEmail, String subject, String message, String  htmlBody) throws Exception {
